@@ -274,17 +274,45 @@ export function TimelineTable({
         // If not used yet on any day, don't show anything (will be triggered by action panel)
       } else {
         // Unlimited actions - show existing actions for this role
-        // These are already in dayActions, but we want to filter to specific action
-        const matching = timelines
-          .find((t) => t.day === day)
-          ?.actions.filter(
-            (a) => a.role === roleName && a.action === actionConfig.action
-          );
-        if (matching) {
-          for (const m of matching) {
-            const desc = formatAction(m, players, timelines, day);
-            if (!result.includes(desc)) {
-              result.push(desc);
+        // For vote action, show on all days after it was first used
+        if (actionConfig.action === "vote") {
+          const usedDay = firstUsedDay.get(key);
+          if (usedDay !== undefined) {
+            if (usedDay === day) {
+              // This day has the action - show formatted description
+              const found = timelines
+                .find((t) => t.day === day)
+                ?.actions.find(
+                  (a) => a.role === roleName && a.action === actionConfig.action
+                );
+              if (found) {
+                result.push(formatAction(found, players, timelines, day));
+              }
+            } else {
+              // Used on a previous day - show with strikethrough
+              const found = timelines
+                .find((t) => t.day === usedDay)
+                ?.actions.find(
+                  (a) => a.role === roleName && a.action === actionConfig.action
+                );
+              if (found) {
+                result.push(formatAction(found, players, timelines, usedDay));
+              }
+            }
+          }
+        } else {
+          // Other unlimited actions - show existing actions for this role
+          const matching = timelines
+            .find((t) => t.day === day)
+            ?.actions.filter(
+              (a) => a.role === roleName && a.action === actionConfig.action
+            );
+          if (matching) {
+            for (const m of matching) {
+              const desc = formatAction(m, players, timelines, day);
+              if (!result.includes(desc)) {
+                result.push(desc);
+              }
             }
           }
         }
