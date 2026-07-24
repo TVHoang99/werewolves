@@ -154,7 +154,10 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
             <p className="text-sm text-muted-foreground">
               Người chơi: <span className="font-medium text-foreground">{actors.map((a) => a.name).join(", ")}</span>
             </p>
-            {actors.length === 1 ? (
+            {/* Wolves share one bite action */}
+            {(roleName === "soi" || roleName === "soi_nguyen") && actors.length > 1 ? (
+              renderAction(actors[0].id, deadPlayerIds.has(actors[0].id))
+            ) : actors.length === 1 ? (
               renderAction(actors[0].id, deadPlayerIds.has(actors[0].id))
             ) : (
               actors.map((actor) => (
