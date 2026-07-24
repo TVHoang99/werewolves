@@ -86,7 +86,11 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
   }, [timelines]);
 
   const actors = roleName
-    ? players.filter((p) => p.role === roleName)
+    ? players.filter((p) => {
+        // Include soi_nguyen in soi group
+        if (roleName === "soi" && p.role === "soi_nguyen") return true;
+        return p.role === roleName;
+      })
     : [];
 
   // Check if there are any alive wolves
@@ -145,21 +149,21 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
           <div className="py-8 text-center text-muted-foreground">
             <p>Không có người chơi nào đảm nhận vai trò này.</p>
           </div>
-        ) : actors.length === 1 ? (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Người chơi: <span className="font-medium text-foreground">{actors[0].name}</span>
-            </p>
-            {renderAction(actors[0].id, deadPlayerIds.has(actors[0].id))}
-          </div>
         ) : (
           <div className="space-y-4">
-            {actors.map((actor) => (
-              <div key={actor.id} className="space-y-2">
-                <p className="text-sm font-medium">{actor.name}</p>
-                {renderAction(actor.id, deadPlayerIds.has(actor.id))}
-              </div>
-            ))}
+            <p className="text-sm text-muted-foreground">
+              Người chơi: <span className="font-medium text-foreground">{actors.map((a) => a.name).join(", ")}</span>
+            </p>
+            {actors.length === 1 ? (
+              renderAction(actors[0].id, deadPlayerIds.has(actors[0].id))
+            ) : (
+              actors.map((actor) => (
+                <div key={actor.id} className="space-y-2">
+                  <p className="text-sm font-medium">{actor.name}</p>
+                  {renderAction(actor.id, deadPlayerIds.has(actor.id))}
+                </div>
+              ))
+            )}
           </div>
         )}
       </DialogContent>
