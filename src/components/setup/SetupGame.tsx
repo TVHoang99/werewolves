@@ -19,13 +19,13 @@ export function SetupGame() {
   const canStart = players.length >= 2 && players.every((p) => p.role && p.name.trim());
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-lg">
         {/* Card */}
-        <div className="rounded-xl border bg-card text-card-foreground shadow-lg p-8">
+        <div className="rounded-xl border bg-card text-card-foreground shadow-lg p-6 sm:p-8 animate-in fade-in duration-300">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold tracking-tight">
+          <div className="text-center mb-6 sm:mb-8">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
               Thêm vai và người chơi
             </h1>
           </div>
@@ -51,7 +51,7 @@ export function SetupGame() {
 
           {/* Empty State */}
           {players.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground animate-in fade-in duration-300">
               <p className="text-sm">Chưa có người chơi nào</p>
               <p className="text-xs mt-1">
                 Nhấn &quot;+ Thêm Role&quot; để bắt đầu

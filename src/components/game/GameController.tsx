@@ -28,31 +28,33 @@ export function GameController() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto p-4 md:p-6">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold tracking-tight">Game Controller</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Game Controller</h1>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={newMatch}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Trận mới
+            <Button variant="outline" onClick={newMatch} size="sm">
+              <RotateCcw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Trận mới</span>
+              <span className="sm:hidden">Mới</span>
             </Button>
-            <Button variant="outline" onClick={newGame}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Trò chơi mới
+            <Button variant="outline" onClick={newGame} size="sm">
+              <RefreshCw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Trò chơi mới</span>
+              <span className="sm:hidden">Reset</span>
             </Button>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content - 2 columns on desktop, stacked on tablet */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Role List - Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 order-2 lg:order-1">
             <RoleList players={players} onEditRole={handleEditRole} />
           </div>
 
           {/* Timeline - Main area */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 order-1 lg:order-2">
             <TimelineTable
               players={players}
               timelines={timelines}

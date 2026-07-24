@@ -26,15 +26,15 @@ export function RoleList({ players, onEditRole }: RoleListProps) {
   const roleNames = Object.keys(grouped);
 
   return (
-    <div className="rounded-xl border bg-card text-card-foreground shadow-lg p-6">
-      <h2 className="text-lg font-semibold mb-4">Danh sách Role</h2>
+    <div className="rounded-xl border bg-card text-card-foreground shadow-lg p-4 sm:p-6">
+      <h2 className="text-base sm:text-lg font-semibold mb-4">Danh sách Role</h2>
 
       {roleNames.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-4">
           Chưa có người chơi nào
         </p>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {roleNames.map((roleName) => {
             const roleConfig = ROLE_MAP[roleName as RoleName];
             if (!roleConfig) return null;
@@ -44,15 +44,15 @@ export function RoleList({ players, onEditRole }: RoleListProps) {
             return (
               <div
                 key={roleName}
-                className="rounded-lg border bg-secondary/50 p-4"
+                className="rounded-lg border bg-secondary/50 p-3 sm:p-4 transition-colors duration-150 hover:bg-secondary/70"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Icon className="h-5 w-5 text-primary" />
-                    <span className="font-medium">
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                    <span className="font-medium text-sm sm:text-base">
                       {roleConfig.label}
                     </span>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
                       ({rolePlayers.length})
                     </span>
                   </div>
@@ -60,17 +60,18 @@ export function RoleList({ players, onEditRole }: RoleListProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => onEditRole(roleName as RoleName)}
+                    className="h-8"
                   >
-                    <Pencil className="h-4 w-4 mr-1" />
+                    <Pencil className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                     Sửa
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {rolePlayers.map((player) => (
                     <span
                       key={player.id}
-                      className="inline-flex items-center rounded-md bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary"
+                      className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 sm:px-2.5 sm:py-0.5 text-xs sm:text-sm font-medium text-primary"
                     >
                       {player.name || "Chưa đặt tên"}
                     </span>

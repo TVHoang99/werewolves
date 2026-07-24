@@ -192,29 +192,30 @@ export function TimelineTable({
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-lg overflow-hidden">
-      <div className="p-4 border-b flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Timeline</h2>
-        <div className="flex items-center gap-2">
+      <div className="p-3 sm:p-4 border-b flex items-center justify-between">
+        <h2 className="text-base sm:text-lg font-semibold">Timeline</h2>
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             variant="outline"
             size="icon"
             onClick={handlePrevDay}
             disabled={currentDay <= 1}
+            className="h-8 w-8 sm:h-10 sm:w-10"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-medium px-2">Ngày {currentDay}</span>
-          <Button variant="outline" size="icon" onClick={advanceDay}>
+          <span className="text-xs sm:text-sm font-medium px-1 sm:px-2">Ngày {currentDay}</span>
+          <Button variant="outline" size="icon" onClick={advanceDay} className="h-8 w-8 sm:h-10 sm:w-10">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <div className="overflow-auto max-h-[500px]">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto max-h-[400px] sm:max-h-[500px]">
+        <table className="w-full text-xs sm:text-sm">
           <thead className="sticky top-0 bg-card z-20">
             <tr className="border-b">
-              <th className="text-left p-3 font-medium text-muted-foreground w-24 sticky left-0 bg-card z-30 border-r">
+              <th className="text-left p-2 sm:p-3 font-medium text-muted-foreground w-20 sm:w-24 sticky left-0 bg-card z-30 border-r">
                 Ngày
               </th>
               {roles.map((roleName) => {
@@ -223,10 +224,10 @@ export function TimelineTable({
                 return (
                   <th
                     key={roleName}
-                    className="text-left p-3 font-medium text-muted-foreground whitespace-nowrap"
+                    className="text-left p-2 sm:p-3 font-medium text-muted-foreground whitespace-nowrap"
                   >
-                    <div className="flex items-center gap-1.5">
-                      <roleConfig.icon className="h-4 w-4" />
+                    <div className="flex items-center gap-1 sm:gap-1.5">
+                      <roleConfig.icon className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span>{roleConfig.label}</span>
                     </div>
                   </th>
@@ -239,7 +240,7 @@ export function TimelineTable({
               <tr>
                 <td
                   colSpan={roles.length + 1}
-                  className="text-center p-8 text-muted-foreground"
+                  className="text-center p-6 sm:p-8 text-muted-foreground"
                 >
                   Chưa có hoạt động nào
                 </td>
@@ -251,34 +252,35 @@ export function TimelineTable({
                   <tr
                     key={day}
                     onClick={() => setCurrentDay(day)}
-                    className={`border-b last:border-0 cursor-pointer transition-colors ${
+                    className={`border-b last:border-0 cursor-pointer transition-colors duration-150 ${
                       isCurrentDay
                         ? "bg-primary/10 font-medium"
                         : "hover:bg-muted/50"
                     }`}
                   >
                     <td
-                      className={`p-3 font-medium sticky left-0 z-10 border-r ${
+                      className={`p-2 sm:p-3 font-medium sticky left-0 z-10 border-r ${
                         isCurrentDay ? "bg-primary/10" : "bg-card"
                       }`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2">
                         {isCurrentDay && (
-                          <span className="h-2 w-2 rounded-full bg-primary inline-block" />
+                          <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-primary inline-block" />
                         )}
-                        Ngày {day}
+                        <span className="hidden sm:inline">Ngày {day}</span>
+                        <span className="sm:hidden">N{day}</span>
                       </div>
                     </td>
                     {roles.map((roleName) => {
                       const cellContent = getCellContent(day, roleName);
                       return (
-                        <td key={roleName} className="p-3">
+                        <td key={roleName} className="p-2 sm:p-3">
                           {cellContent.length > 0 ? (
-                            <ul className="space-y-1">
+                            <ul className="space-y-0.5 sm:space-y-1">
                               {cellContent.map((desc, i) => (
                                 <li
                                   key={i}
-                                  className={`text-xs ${
+                                  className={`text-[10px] sm:text-xs ${
                                     desc === "Đã dùng"
                                       ? "text-muted-foreground/60 italic"
                                       : "text-muted-foreground"
@@ -289,7 +291,7 @@ export function TimelineTable({
                               ))}
                             </ul>
                           ) : (
-                            <span className="text-xs text-muted-foreground/50">
+                            <span className="text-[10px] sm:text-xs text-muted-foreground/50">
                               —
                             </span>
                           )}

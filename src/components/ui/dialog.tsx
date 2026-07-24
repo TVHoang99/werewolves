@@ -28,11 +28,11 @@ function Dialog({ open, onOpenChange, children }: DialogProps) {
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/80"
+        className="fixed inset-0 bg-black/80 dialog-backdrop"
         onClick={() => onOpenChange(false)}
       />
       {/* Content */}
-      <div className="fixed inset-0 flex items-center justify-center p-4">
+      <div className="fixed inset-0 flex items-center justify-center p-4 sm:p-6">
         {children}
       </div>
     </div>
@@ -48,7 +48,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
     <div
       ref={ref}
       className={cn(
-        "relative bg-card text-card-foreground rounded-xl border shadow-lg p-6 w-full max-w-md",
+        "relative bg-card text-card-foreground rounded-xl border shadow-lg p-5 sm:p-6 w-full max-w-md sm:max-w-lg max-h-[90vh] overflow-y-auto dialog-content",
         className
       )}
       {...props}
