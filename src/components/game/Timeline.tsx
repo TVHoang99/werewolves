@@ -16,7 +16,9 @@ interface TimelineProps {
 
 function formatAction(
   action: RoleAction,
-  players: Player[]
+  players: Player[],
+  timelines: TimelineType[] = [],
+  day?: number
 ): string {
   const role = action.role as RoleName;
   const targetName = (id: string) =>
@@ -44,7 +46,17 @@ function formatAction(
         return `Bảo vệ → ${targetName(action.target)}`;
       break;
     case "phu_thuy":
-      if (action.action === "cuu") return "Cứu";
+      if (action.action === "cuu") {
+        // Tìm người bị sói cắn trong ngày này
+        const targetDay = day ?? action.day;
+        const wolfBite = timelines
+          .find((t) => t.day === targetDay)
+          ?.actions.find((a) => a.role === "soi" && a.action === "can");
+        if (wolfBite?.target) {
+          return `Cứu → ${targetName(wolfBite.target)}`;
+        }
+        return "Cứu";
+      }
       if (action.action === "giet" && action.target)
         return `Giết → ${targetName(action.target)}`;
       break;
@@ -115,7 +127,7 @@ export function TimelineTable({
         if (!map[timeline.day][roleName]) {
           map[timeline.day][roleName] = [];
         }
-        map[timeline.day][roleName].push(formatAction(action, players));
+        map[timeline.day][roleName].push(formatAction(action, players, timelines, timeline.day));
       }
     }
     return map;
@@ -150,7 +162,7 @@ export function TimelineTable({
                 (a) => a.role === roleName && a.action === actionConfig.action
               );
             if (found) {
-              result.push(formatAction(found, players));
+              result.push(formatAction(found, players, timelines, day));
             }
           } else {
             // Used on a previous day - show lock
@@ -168,7 +180,7 @@ export function TimelineTable({
           );
         if (matching) {
           for (const m of matching) {
-            const desc = formatAction(m, players);
+            const desc = formatAction(m, players, timelines, day);
             if (!result.includes(desc)) {
               result.push(desc);
             }
