@@ -28,7 +28,7 @@ export function GameController() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto p-4 sm:p-6">
+      <div className="max-w-[82rem] mx-auto p-4 sm:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Game Controller</h1>
