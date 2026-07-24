@@ -92,6 +92,27 @@ export function GameController() {
     return players.filter((p) => !deadPlayerIds.has(p.id));
   }, [players, deadPlayerIds]);
 
+  // Calculate win conditions
+  const gameResult = useMemo(() => {
+    const alivePlayers = players.filter((p) => !deadPlayerIds.has(p.id));
+    const aliveWolves = alivePlayers.filter(
+      (p) => p.role === "soi" || p.role === "soi_nguyen"
+    );
+    const aliveNonWolves = alivePlayers.filter(
+      (p) => p.role !== "soi" && p.role !== "soi_nguyen"
+    );
+
+    // Wolves win if wolves >= non-wolves
+    if (aliveWolves.length >= aliveNonWolves.length && aliveWolves.length > 0) {
+      return "wolves";
+    }
+    // Villagers win if no wolves left
+    if (aliveWolves.length === 0 && aliveNonWolves.length > 0) {
+      return "villagers";
+    }
+    return null;
+  }, [players, deadPlayerIds]);
+
   const handleEditRole = (roleName: RoleName) => {
     setEditRole(roleName);
     setEditPanelOpen(true);
@@ -140,6 +161,23 @@ export function GameController() {
             </Button>
           </div>
         </div>
+
+        {/* Win Condition Banner */}
+        {gameResult && (
+          <div
+            className={`mb-6 p-4 rounded-lg text-center ${
+              gameResult === "wolves"
+                ? "bg-red-500/20 border border-red-500/50 text-red-400"
+                : "bg-green-500/20 border border-green-500/50 text-green-400"
+            }`}
+          >
+            <p className="text-lg font-bold">
+              {gameResult === "wolves"
+                ? "Sói thắng! Số sói >= Số người còn lại"
+                : "Dân làng thắng! Không còn sói nào"}
+            </p>
+          </div>
+        )}
 
         {/* Main Content - 2 columns on desktop, stacked on tablet */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
