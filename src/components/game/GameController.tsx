@@ -3,6 +3,13 @@
 import { useState, useMemo } from "react";
 import { RotateCcw, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { RoleList } from "./RoleList";
 import { TimelineTable } from "./Timeline";
 import { EditPanel } from "./EditPanel";
@@ -17,9 +24,12 @@ export function GameController() {
   const advanceDay = useGameStore((s) => s.advanceDay);
   const newMatch = useGameStore((s) => s.newMatch);
   const newGame = useGameStore((s) => s.newGame);
+  const addAction = useGameStore((s) => s.addAction);
 
   const [editRole, setEditRole] = useState<RoleName | null>(null);
   const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [voteOpen, setVoteOpen] = useState(false);
+  const [voteTargetId, setVoteTargetId] = useState("");
 
   // Calculate all dead player IDs from timelines
   const deadPlayerIds = useMemo(() => {
@@ -51,13 +61,53 @@ export function GameController() {
       if (hunterShoot?.target) {
         dead.add(hunterShoot.target);
       }
+
+      // Vote results
+      const voteActions = actions.filter((a) => a.role === "dan_lang" && a.action === "vote" && a.target);
+      if (voteActions.length > 0) {
+        const voteCounts: Record<string, number> = {};
+        for (const vote of voteActions) {
+          if (vote.target) {
+            voteCounts[vote.target] = (voteCounts[vote.target] || 0) + 1;
+          }
+        }
+        let maxVotes = 0;
+        let maxVotedId = "";
+        for (const [playerId, count] of Object.entries(voteCounts)) {
+          if (count > maxVotes) {
+            maxVotes = count;
+            maxVotedId = playerId;
+          }
+        }
+        if (maxVotedId && maxVotes > 0) {
+          dead.add(maxVotedId);
+        }
+      }
     }
     return dead;
   }, [timelines]);
 
+  // Get living players for vote
+  const livingPlayers = useMemo(() => {
+    return players.filter((p) => !deadPlayerIds.has(p.id));
+  }, [players, deadPlayerIds]);
+
   const handleEditRole = (roleName: RoleName) => {
     setEditRole(roleName);
     setEditPanelOpen(true);
+  };
+
+  const handleVote = () => {
+    if (!voteTargetId) return;
+    addAction({
+      role: "dan_lang",
+      actor: "vote",
+      action: "vote",
+      target: voteTargetId,
+      day: currentDay,
+    });
+    setVoteTargetId("");
+    setVoteOpen(false);
   };
 
   return (
@@ -67,6 +117,9 @@ export function GameController() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Game Controller</h1>
           <div className="flex items-center gap-2">
+            <Button variant="destructive" onClick={() => setVoteOpen(true)} size="sm">
+              Vote
+            </Button>
             <Button variant="outline" onClick={newMatch} size="sm">
               <RotateCcw className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Trận mới</span>
@@ -114,6 +167,29 @@ export function GameController() {
         onOpenChange={setEditPanelOpen}
         roleName={editRole}
       />
+
+      {/* Vote Dialog */}
+      <Dialog open={voteOpen} onOpenChange={setVoteOpen}>
+        <DialogContent onClose={() => setVoteOpen(false)}>
+          <DialogHeader>
+            <DialogTitle>Vote loại người chơi</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Chọn người chơi bị vote loại khỏi game
+            </p>
+            <Select
+              value={voteTargetId}
+              onValueChange={setVoteTargetId}
+              options={livingPlayers.map((p) => ({ value: p.id, label: p.name }))}
+              placeholder="Chọn người bị vote..."
+            />
+            <Button onClick={handleVote} disabled={!voteTargetId} className="w-full">
+              Xác nhận
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

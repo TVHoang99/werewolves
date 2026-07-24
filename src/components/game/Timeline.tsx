@@ -66,6 +66,10 @@ function formatAction(
         return "Nhận mẹ";
       }
       break;
+    case "dan_lang":
+      if (action.action === "vote" && action.target)
+        return `vote`;
+      break;
     default:
       break;
   }
@@ -183,6 +187,28 @@ export function TimelineTable({
       deaths.push(targetName(hunterShoot.target));
     }
 
+    // Vote results - most votes = death
+    const voteActions = actions.filter((a) => a.role === "dan_lang" && a.action === "vote" && a.target);
+    if (voteActions.length > 0) {
+      const voteCounts: Record<string, number> = {};
+      for (const vote of voteActions) {
+        if (vote.target) {
+          voteCounts[vote.target] = (voteCounts[vote.target] || 0) + 1;
+        }
+      }
+      let maxVotes = 0;
+      let maxVotedId = "";
+      for (const [playerId, count] of Object.entries(voteCounts)) {
+        if (count > maxVotes) {
+          maxVotes = count;
+          maxVotedId = playerId;
+        }
+      }
+      if (maxVotedId && maxVotes > 0) {
+        deaths.push(targetName(maxVotedId));
+      }
+    }
+
     return deaths;
   }
 
@@ -208,6 +234,9 @@ export function TimelineTable({
     }
     if (desc.startsWith("Nhận mẹ")) {
       return "text-purple-400";
+    }
+    if (desc.startsWith("Vote")) {
+      return "text-red-400";
     }
     return "text-muted-foreground";
   }
@@ -368,7 +397,9 @@ export function TimelineTable({
                                   className={`text-[10px] sm:text-xs ${
                                     desc === "Đã dùng"
                                       ? "text-muted-foreground/60 italic"
-                                      : getActionColor(desc)
+                                      : desc === "vote"
+                                        ? "text-red-400 font-medium line-through"
+                                        : getActionColor(desc)
                                   }`}
                                 >
                                   {desc}
