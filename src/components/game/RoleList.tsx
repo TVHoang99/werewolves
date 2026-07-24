@@ -16,10 +16,19 @@ export function RoleList({ players, deadPlayerIds, onEditRole }: RoleListProps) 
   const grouped = useMemo(() => {
     const groups: Record<string, Player[]> = {};
     for (const player of players) {
+      // Add to original role group
       if (!groups[player.role]) {
         groups[player.role] = [];
       }
       groups[player.role].push(player);
+
+      // Also add soi_nguyen players to soi group
+      if (player.role === "soi_nguyen") {
+        if (!groups["soi"]) {
+          groups["soi"] = [];
+        }
+        groups["soi"].push(player);
+      }
     }
     return groups;
   }, [players]);
