@@ -82,7 +82,9 @@ export const ROLES: RoleConfig[] = [
     label: "Dân làng",
     icon: Users,
     isWolf: false,
-    actions: [],
+    actions: [
+      { action: "vote", label: "Vote", limit: 0, targetCount: 1 },
+    ],
   },
   {
     name: "role_tuy_chinh",
