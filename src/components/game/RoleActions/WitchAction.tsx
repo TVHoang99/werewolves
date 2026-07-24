@@ -27,8 +27,19 @@ export function WitchAction({ actorId }: WitchActionProps) {
     (a) => a.actor === actorId && a.action === "giet"
   );
 
+  // Check if guard protected the wolf bite victim
+  const dayTimeline = timelines.find((t) => t.day === currentDay);
+  const wolfBite = dayTimeline?.actions.find(
+    (a) => a.role === "soi" && a.action === "can"
+  );
+  const guardProtect = dayTimeline?.actions.find(
+    (a) => a.role === "bao_ve" && a.action === "bao_ve"
+  );
+  const guardProtectedWolfVictim =
+    wolfBite?.target && guardProtect?.target === wolfBite.target;
+
   const handleCuu = () => {
-    if (usedCuu) return;
+    if (usedCuu || guardProtectedWolfVictim) return;
     addAction({
       role: "phu_thuy",
       actor: actorId,
@@ -56,6 +67,8 @@ export function WitchAction({ actorId }: WitchActionProps) {
         <p className="text-sm font-medium">Cứu</p>
         {usedCuu || existingCuu ? (
           <p className="text-sm text-muted-foreground">Đã dùng</p>
+        ) : guardProtectedWolfVictim ? (
+          <p className="text-sm text-green-400">Bảo vệ đã cứu</p>
         ) : (
           <Button size="sm" onClick={handleCuu}>
             Cứu
