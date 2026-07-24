@@ -89,9 +89,26 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
     ? players.filter((p) => p.role === roleName)
     : [];
 
+  // Check if there are any alive wolves
+  const hasAliveWolves = useMemo(() => {
+    return players.some(
+      (p) =>
+        !deadPlayerIds.has(p.id) && (p.role === "soi" || p.role === "soi_nguyen")
+    );
+  }, [players, deadPlayerIds]);
+
   const renderAction = (actorId: string, isDead: boolean) => {
     // If player is dead and not villager, show dead message
+    // Exception: wolves can still bite if other wolves are alive
     if (isDead && roleName !== "dan_lang") {
+      if ((roleName === "soi" || roleName === "soi_nguyen") && hasAliveWolves) {
+        // Dead wolf - show message but still allow bite if other wolves alive
+        return (
+          <div className="space-y-2">
+            <p className="text-sm text-yellow-400 italic">Đã chết - Sói khác sẽ thực hiện</p>
+          </div>
+        );
+      }
       return (
         <p className="text-sm text-red-400 italic">Đã chết - Không thể sử dụng kỹ năng</p>
       );
