@@ -24,7 +24,7 @@ export const ROLES: RoleConfig[] = [
   },
   {
     name: "soi_nguyen",
-    label: "Sói nguyên",
+    label: "Sói nguyền",
     icon: Crown,
     isWolf: true,
     actions: [

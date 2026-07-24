@@ -38,6 +38,11 @@ export function WitchAction({ actorId }: WitchActionProps) {
   const guardProtectedWolfVictim =
     wolfBite?.target && guardProtect?.target === wolfBite.target;
 
+  // Get wolf bite victim name
+  const wolfBiteVictimName = wolfBite?.target
+    ? players.find((p) => p.id === wolfBite.target)?.name
+    : null;
+
   const handleCuu = () => {
     if (usedCuu || guardProtectedWolfVictim) return;
     addAction({
@@ -64,15 +69,19 @@ export function WitchAction({ actorId }: WitchActionProps) {
     <div className="space-y-4">
       {/* Cứu action */}
       <div className="space-y-2">
-        <p className="text-sm font-medium">Cứu</p>
+        <p className="text-sm font-medium">
+          Cứu {wolfBiteVictimName && <span className="text-muted-foreground">→ {wolfBiteVictimName}</span>}
+        </p>
         {usedCuu || existingCuu ? (
           <p className="text-sm text-muted-foreground">Đã dùng</p>
         ) : guardProtectedWolfVictim ? (
           <p className="text-sm text-green-400">Bảo vệ đã cứu</p>
-        ) : (
+        ) : wolfBiteVictimName ? (
           <Button size="sm" onClick={handleCuu}>
-            Cứu
+            Cứu {wolfBiteVictimName}
           </Button>
+        ) : (
+          <p className="text-sm text-muted-foreground">Chưa có người bị cắn</p>
         )}
       </div>
 
