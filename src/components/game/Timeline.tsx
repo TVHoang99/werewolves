@@ -68,7 +68,7 @@ function formatAction(
       break;
     case "dan_lang":
       if (action.action === "vote" && action.target)
-        return `vote`;
+        return `Vote: ${targetName(action.target)}`;
       break;
     default:
       break;
@@ -397,7 +397,7 @@ export function TimelineTable({
                                   className={`text-[10px] sm:text-xs ${
                                     desc === "Đã dùng"
                                       ? "text-muted-foreground/60 italic"
-                                      : desc === "vote"
+                                      : desc.startsWith("Vote:")
                                         ? "text-red-400 font-medium line-through"
                                         : getActionColor(desc)
                                   }`}
