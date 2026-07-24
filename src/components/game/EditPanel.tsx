@@ -33,10 +33,13 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
   // Calculate dead player IDs (only from previous days)
   const deadPlayerIds = useMemo(() => {
     const dead = new Set<string>();
+    const deadThisRound = new Set<string>();
+
     for (const timeline of timelines) {
       // Only count deaths from previous days
       if (timeline.day >= currentDay) continue;
 
+      deadThisRound.clear();
       const actions = timeline.actions;
 
       // Wolf bite victim
@@ -49,6 +52,7 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
         const isSaved = witchSave;
         if (!isProtected && !isSaved) {
           dead.add(wolfBite.target);
+          deadThisRound.add(wolfBite.target);
         }
       }
 
@@ -56,12 +60,7 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
       const witchKill = actions.find((a) => a.role === "phu_thuy" && a.action === "giet");
       if (witchKill?.target) {
         dead.add(witchKill.target);
-      }
-
-      // Hunter shoot
-      const hunterShoot = actions.find((a) => a.role === "tho_san" && a.action === "san_cung");
-      if (hunterShoot?.target) {
-        dead.add(hunterShoot.target);
+        deadThisRound.add(witchKill.target);
       }
 
       // Vote results
@@ -83,11 +82,44 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
         }
         if (maxVotedId && maxVotes > 0) {
           dead.add(maxVotedId);
+          deadThisRound.add(maxVotedId);
+        }
+      }
+
+      // Check Cupid pairs - if one dies, partner also dies
+      const cupidAction = actions.find((a) => a.role === "cupid" && a.action === "ghep_doi");
+      if (cupidAction?.target && cupidAction?.target2) {
+        const partner1Dead = deadThisRound.has(cupidAction.target);
+        const partner2Dead = deadThisRound.has(cupidAction.target2);
+        if (partner1Dead && !dead.has(cupidAction.target2)) {
+          dead.add(cupidAction.target2);
+          deadThisRound.add(cupidAction.target2);
+        }
+        if (partner2Dead && !dead.has(cupidAction.target)) {
+          dead.add(cupidAction.target);
+          deadThisRound.add(cupidAction.target);
+        }
+      }
+
+      // Check Hunter - if hunter dies, they can take someone with them
+      const hunters = players.filter((p) => p.role === "tho_san");
+      for (const hunter of hunters) {
+        if (deadThisRound.has(hunter.id)) {
+          // Find hunter's "săn cùng" target from any day
+          for (const t of timelines) {
+            const hunterAction = t.actions.find(
+              (a) => a.actor === hunter.id && a.action === "san_cung" && a.target
+            );
+            if (hunterAction?.target && !dead.has(hunterAction.target)) {
+              dead.add(hunterAction.target);
+              deadThisRound.add(hunterAction.target);
+            }
+          }
         }
       }
     }
     return dead;
-  }, [timelines, currentDay]);
+  }, [timelines, currentDay, players]);
 
   const actors = roleName
     ? players.filter((p) => {

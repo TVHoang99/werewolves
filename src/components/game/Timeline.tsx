@@ -154,6 +154,7 @@ export function TimelineTable({
     if (!dayTimeline) return [];
 
     const deaths: string[] = [];
+    const deadIds = new Set<string>();
     const targetName = (id: string) =>
       players.find((p) => p.id === id)?.name ?? "???";
 
@@ -167,26 +168,21 @@ export function TimelineTable({
     const witchSave = actions.find((a) => a.role === "phu_thuy" && a.action === "cuu");
     // Find witch kill
     const witchKill = actions.find((a) => a.role === "phu_thuy" && a.action === "giet");
-    // Find hunter shoot
-    const hunterShoot = actions.find((a) => a.role === "tho_san" && a.action === "san_cung");
 
     // Wolf bite victim dies unless protected or saved
     if (wolfBite?.target) {
       const isProtected = guardProtect?.target === wolfBite.target;
-      const isSaved = witchSave; // Witch save saves the wolf bite victim
+      const isSaved = witchSave;
       if (!isProtected && !isSaved) {
         deaths.push(targetName(wolfBite.target));
+        deadIds.add(wolfBite.target);
       }
     }
 
     // Witch kill victim dies
     if (witchKill?.target) {
       deaths.push(targetName(witchKill.target));
-    }
-
-    // Hunter shoot victim dies
-    if (hunterShoot?.target) {
-      deaths.push(targetName(hunterShoot.target));
+      deadIds.add(witchKill.target);
     }
 
     // Vote results - most votes = death
@@ -208,6 +204,39 @@ export function TimelineTable({
       }
       if (maxVotedId && maxVotes > 0) {
         deaths.push(targetName(maxVotedId));
+        deadIds.add(maxVotedId);
+      }
+    }
+
+    // Check Cupid pairs - if one dies, partner also dies
+    const cupidAction = actions.find((a) => a.role === "cupid" && a.action === "ghep_doi");
+    if (cupidAction?.target && cupidAction?.target2) {
+      const partner1Dead = deadIds.has(cupidAction.target);
+      const partner2Dead = deadIds.has(cupidAction.target2);
+      if (partner1Dead && !deadIds.has(cupidAction.target2)) {
+        deaths.push(targetName(cupidAction.target2));
+        deadIds.add(cupidAction.target2);
+      }
+      if (partner2Dead && !deadIds.has(cupidAction.target)) {
+        deaths.push(targetName(cupidAction.target));
+        deadIds.add(cupidAction.target);
+      }
+    }
+
+    // Check Hunter - if hunter dies, they can take someone with them
+    const hunters = players.filter((p) => p.role === "tho_san");
+    for (const hunter of hunters) {
+      if (deadIds.has(hunter.id)) {
+        // Find hunter's "săn cùng" target from any day
+        for (const t of timelines) {
+          const hunterAction = t.actions.find(
+            (a) => a.actor === hunter.id && a.action === "san_cung" && a.target
+          );
+          if (hunterAction?.target && !deadIds.has(hunterAction.target)) {
+            deaths.push(targetName(hunterAction.target));
+            deadIds.add(hunterAction.target);
+          }
+        }
       }
     }
 
