@@ -61,7 +61,10 @@ function formatAction(
         return `Giết → ${targetName(action.target)}`;
       break;
     case "mo_coi":
-      if (action.action === "nhan_me") return "Nhận mẹ";
+      if (action.action === "nhan_me") {
+        if (action.target) return `Nhận mẹ → ${targetName(action.target)}`;
+        return "Nhận mẹ";
+      }
       break;
     default:
       break;
