@@ -212,6 +212,7 @@ export function GameController() {
               currentDay={currentDay}
               setCurrentDay={setCurrentDay}
               advanceDay={advanceDay}
+              deadPlayerIds={deadPlayerIds}
             />
           </div>
         </div>

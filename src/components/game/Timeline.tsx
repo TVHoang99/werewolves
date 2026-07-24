@@ -12,6 +12,7 @@ interface TimelineProps {
   currentDay: number;
   setCurrentDay: (day: number) => void;
   advanceDay: () => void;
+  deadPlayerIds: Set<string>;
 }
 
 function formatAction(
@@ -87,6 +88,7 @@ export function TimelineTable({
   currentDay,
   setCurrentDay,
   advanceDay,
+  deadPlayerIds,
 }: TimelineProps) {
   const roles = useMemo(() => {
     const roleSet = new Set(players.map((p) => p.role));
@@ -308,6 +310,51 @@ export function TimelineTable({
       return dayActions;
     }
 
+    // Check if orphan's mother died on this day
+    if (roleName === "mo_coi") {
+      // Find orphan's mother from previous days
+      let motherId: string | undefined;
+      let motherName: string | undefined;
+      for (const t of timelines) {
+        if (t.day >= day) break;
+        const orphanAction = t.actions.find(
+          (a) => a.role === "mo_coi" && a.action === "nhan_me" && a.target
+        );
+        if (orphanAction?.target) {
+          motherId = orphanAction.target;
+          motherName = players.find((p) => p.id === motherId)?.name;
+        }
+      }
+
+      // Check if mother died on this day
+      if (motherId && deadPlayerIds.has(motherId)) {
+        const dayTimeline = timelines.find((t) => t.day === day);
+        const motherDiedToday = dayTimeline?.actions.some((a) => {
+          // Wolf bite
+          if (a.role === "soi" && a.action === "can" && a.target === motherId) {
+            const guardProtect = dayTimeline.actions.find(
+              (ax) => ax.role === "bao_ve" && ax.action === "bao_ve" && ax.target === motherId
+            );
+            const witchSave = dayTimeline.actions.find(
+              (ax) => ax.role === "phu_thuy" && ax.action === "cuu"
+            );
+            return !guardProtect && !witchSave;
+          }
+          // Witch kill
+          if (a.role === "phu_thuy" && a.action === "giet" && a.target === motherId) return true;
+          // Hunter shoot
+          if (a.role === "tho_san" && a.action === "san_cung" && a.target === motherId) return true;
+          // Vote
+          if (a.role === "dan_lang" && a.action === "vote" && a.target === motherId) return true;
+          return false;
+        });
+
+        if (motherDiedToday) {
+          result.push(`Mất mẹ (${motherName}) -> Hoá sói`);
+        }
+      }
+    }
+
     // If no one-time used and no unlimited actions, return what we have
     if (result.length === 0 && roleConfig.actions.length > 0) {
       return dayActions;
@@ -411,7 +458,9 @@ export function TimelineTable({
                                       ? "text-muted-foreground/60 italic"
                                       : desc.startsWith("Vote →")
                                         ? "text-red-400 font-medium"
-                                        : getActionColor(desc)
+                                        : desc.startsWith("Mất mẹ")
+                                          ? "text-orange-400 font-medium"
+                                          : getActionColor(desc)
                                   }`}
                                 >
                                   {desc}
