@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,12 +27,76 @@ interface EditPanelProps {
 export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
   const roleConfig = roleName ? ROLE_MAP[roleName] : null;
   const players = useGameStore((s) => s.players);
+  const timelines = useGameStore((s) => s.timelines);
+
+  // Calculate dead player IDs
+  const deadPlayerIds = useMemo(() => {
+    const dead = new Set<string>();
+    for (const timeline of timelines) {
+      const actions = timeline.actions;
+
+      // Wolf bite victim
+      const wolfBite = actions.find((a) => a.role === "soi" && a.action === "can");
+      const guardProtect = actions.find((a) => a.role === "bao_ve" && a.action === "bao_ve");
+      const witchSave = actions.find((a) => a.role === "phu_thuy" && a.action === "cuu");
+
+      if (wolfBite?.target) {
+        const isProtected = guardProtect?.target === wolfBite.target;
+        const isSaved = witchSave;
+        if (!isProtected && !isSaved) {
+          dead.add(wolfBite.target);
+        }
+      }
+
+      // Witch kill
+      const witchKill = actions.find((a) => a.role === "phu_thuy" && a.action === "giet");
+      if (witchKill?.target) {
+        dead.add(witchKill.target);
+      }
+
+      // Hunter shoot
+      const hunterShoot = actions.find((a) => a.role === "tho_san" && a.action === "san_cung");
+      if (hunterShoot?.target) {
+        dead.add(hunterShoot.target);
+      }
+
+      // Vote results
+      const voteActions = actions.filter((a) => a.role === "dan_lang" && a.action === "vote" && a.target);
+      if (voteActions.length > 0) {
+        const voteCounts: Record<string, number> = {};
+        for (const vote of voteActions) {
+          if (vote.target) {
+            voteCounts[vote.target] = (voteCounts[vote.target] || 0) + 1;
+          }
+        }
+        let maxVotes = 0;
+        let maxVotedId = "";
+        for (const [playerId, count] of Object.entries(voteCounts)) {
+          if (count > maxVotes) {
+            maxVotes = count;
+            maxVotedId = playerId;
+          }
+        }
+        if (maxVotedId && maxVotes > 0) {
+          dead.add(maxVotedId);
+        }
+      }
+    }
+    return dead;
+  }, [timelines]);
 
   const actors = roleName
     ? players.filter((p) => p.role === roleName)
     : [];
 
-  const renderAction = (actorId: string) => {
+  const renderAction = (actorId: string, isDead: boolean) => {
+    // If player is dead and not villager, show dead message
+    if (isDead && roleName !== "dan_lang") {
+      return (
+        <p className="text-sm text-red-400 italic">Đã chết - Không thể sử dụng kỹ năng</p>
+      );
+    }
+
     switch (roleName) {
       case "soi":
         return <WolfAction actorId={actorId} />;
@@ -72,14 +137,14 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
             <p className="text-sm text-muted-foreground">
               Người chơi: <span className="font-medium text-foreground">{actors[0].name}</span>
             </p>
-            {renderAction(actors[0].id)}
+            {renderAction(actors[0].id, deadPlayerIds.has(actors[0].id))}
           </div>
         ) : (
           <div className="space-y-4">
             {actors.map((actor) => (
               <div key={actor.id} className="space-y-2">
                 <p className="text-sm font-medium">{actor.name}</p>
-                {renderAction(actor.id)}
+                {renderAction(actor.id, deadPlayerIds.has(actor.id))}
               </div>
             ))}
           </div>
