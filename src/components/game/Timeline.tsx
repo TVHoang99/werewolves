@@ -142,6 +142,50 @@ export function TimelineTable({
     }
   };
 
+  // Calculate deaths for a given day
+  function getDeaths(day: number): string[] {
+    const dayTimeline = timelines.find((t) => t.day === day);
+    if (!dayTimeline) return [];
+
+    const deaths: string[] = [];
+    const targetName = (id: string) =>
+      players.find((p) => p.id === id)?.name ?? "???";
+
+    const actions = dayTimeline.actions;
+
+    // Find wolf bite target
+    const wolfBite = actions.find((a) => a.role === "soi" && a.action === "can");
+    // Find guard protection
+    const guardProtect = actions.find((a) => a.role === "bao_ve" && a.action === "bao_ve");
+    // Find witch save
+    const witchSave = actions.find((a) => a.role === "phu_thuy" && a.action === "cuu");
+    // Find witch kill
+    const witchKill = actions.find((a) => a.role === "phu_thuy" && a.action === "giet");
+    // Find hunter shoot
+    const hunterShoot = actions.find((a) => a.role === "tho_san" && a.action === "san_cung");
+
+    // Wolf bite victim dies unless protected or saved
+    if (wolfBite?.target) {
+      const isProtected = guardProtect?.target === wolfBite.target;
+      const isSaved = witchSave; // Witch save saves the wolf bite victim
+      if (!isProtected && !isSaved) {
+        deaths.push(targetName(wolfBite.target));
+      }
+    }
+
+    // Witch kill victim dies
+    if (witchKill?.target) {
+      deaths.push(targetName(witchKill.target));
+    }
+
+    // Hunter shoot victim dies
+    if (hunterShoot?.target) {
+      deaths.push(targetName(hunterShoot.target));
+    }
+
+    return deaths;
+  }
+
   // Determine text color based on action type
   function getActionColor(desc: string): string {
     if (desc.startsWith("Cắn") || desc.startsWith("Giết")) {
@@ -339,6 +383,17 @@ export function TimelineTable({
                         </td>
                       );
                     })}
+                    <td className="p-2 sm:p-3 whitespace-nowrap">
+                      {(() => {
+                        const deaths = getDeaths(day);
+                        if (deaths.length === 0) return null;
+                        return (
+                          <span className="text-[10px] sm:text-xs text-red-400 font-medium">
+                            Chết: {deaths.join(", ")}
+                          </span>
+                        );
+                      })()}
+                    </td>
                   </tr>
                 );
               })

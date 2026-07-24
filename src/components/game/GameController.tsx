@@ -55,14 +55,14 @@ export function GameController() {
         </div>
 
         {/* Main Content - 2 columns on desktop, stacked on tablet */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Role List - Sidebar */}
           <div className="lg:col-span-1 order-2 lg:order-1">
             <RoleList players={players} onEditRole={handleEditRole} />
           </div>
 
           {/* Timeline - Main area */}
-          <div className="lg:col-span-2 order-1 lg:order-2">
+          <div className="lg:col-span-3 order-1 lg:order-2">
             <TimelineTable
               players={players}
               timelines={timelines}
