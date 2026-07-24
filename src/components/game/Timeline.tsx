@@ -410,7 +410,7 @@ export function TimelineTable({
                                     desc === "Đã dùng"
                                       ? "text-muted-foreground/60 italic"
                                       : desc.startsWith("Vote →")
-                                        ? "text-red-400 font-medium line-through"
+                                        ? "text-red-400 font-medium"
                                         : getActionColor(desc)
                                   }`}
                                 >
