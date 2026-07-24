@@ -15,7 +15,7 @@ export function AlphaWolfAction({ actorId }: AlphaWolfActionProps) {
   const [targetId, setTargetId] = useState("");
 
   const otherPlayers = players.filter((p) => p.id !== actorId);
-  const used = roleStates["soi-nguyen"]?.["nguyen"] ?? false;
+  const used = roleStates["soi_nguyen"]?.["nguyen"] ?? false;
 
   const currentDayActions =
     timelines.find((t) => t.day === currentDay)?.actions ?? [];
@@ -26,7 +26,7 @@ export function AlphaWolfAction({ actorId }: AlphaWolfActionProps) {
   const handleSave = () => {
     if (!targetId || used) return;
     addAction({
-      role: "soi-nguyen",
+      role: "soi_nguyen",
       actor: actorId,
       action: "nguyen",
       target: targetId,
