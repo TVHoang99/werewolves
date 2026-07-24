@@ -8,10 +8,11 @@ import type { Player, RoleName } from "@/lib/types";
 
 interface RoleListProps {
   players: Player[];
+  deadPlayerIds: Set<string>;
   onEditRole: (roleName: RoleName) => void;
 }
 
-export function RoleList({ players, onEditRole }: RoleListProps) {
+export function RoleList({ players, deadPlayerIds, onEditRole }: RoleListProps) {
   const grouped = useMemo(() => {
     const groups: Record<string, Player[]> = {};
     for (const player of players) {
@@ -68,14 +69,21 @@ export function RoleList({ players, onEditRole }: RoleListProps) {
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {rolePlayers.map((player) => (
-                    <span
-                      key={player.id}
-                      className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 sm:px-2.5 sm:py-0.5 text-xs sm:text-sm font-medium text-primary"
-                    >
-                      {player.name || "Chưa đặt tên"}
-                    </span>
-                  ))}
+                  {rolePlayers.map((player) => {
+                    const isDead = deadPlayerIds.has(player.id);
+                    return (
+                      <span
+                        key={player.id}
+                        className={`inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 sm:px-2.5 sm:py-0.5 text-xs sm:text-sm font-medium ${
+                          isDead
+                            ? "text-muted-foreground line-through opacity-60"
+                            : "text-primary"
+                        }`}
+                      >
+                        {player.name || "Chưa đặt tên"}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             );

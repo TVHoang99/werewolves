@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { RotateCcw, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RoleList } from "./RoleList";
@@ -20,6 +20,40 @@ export function GameController() {
 
   const [editRole, setEditRole] = useState<RoleName | null>(null);
   const [editPanelOpen, setEditPanelOpen] = useState(false);
+
+  // Calculate all dead player IDs from timelines
+  const deadPlayerIds = useMemo(() => {
+    const dead = new Set<string>();
+    for (const timeline of timelines) {
+      const actions = timeline.actions;
+
+      // Wolf bite victim
+      const wolfBite = actions.find((a) => a.role === "soi" && a.action === "can");
+      const guardProtect = actions.find((a) => a.role === "bao_ve" && a.action === "bao_ve");
+      const witchSave = actions.find((a) => a.role === "phu_thuy" && a.action === "cuu");
+
+      if (wolfBite?.target) {
+        const isProtected = guardProtect?.target === wolfBite.target;
+        const isSaved = witchSave;
+        if (!isProtected && !isSaved) {
+          dead.add(wolfBite.target);
+        }
+      }
+
+      // Witch kill
+      const witchKill = actions.find((a) => a.role === "phu_thuy" && a.action === "giet");
+      if (witchKill?.target) {
+        dead.add(witchKill.target);
+      }
+
+      // Hunter shoot
+      const hunterShoot = actions.find((a) => a.role === "tho_san" && a.action === "san_cung");
+      if (hunterShoot?.target) {
+        dead.add(hunterShoot.target);
+      }
+    }
+    return dead;
+  }, [timelines]);
 
   const handleEditRole = (roleName: RoleName) => {
     setEditRole(roleName);
@@ -58,7 +92,7 @@ export function GameController() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Role List - Sidebar */}
           <div className="lg:col-span-1 order-2 lg:order-1">
-            <RoleList players={players} onEditRole={handleEditRole} />
+            <RoleList players={players} deadPlayerIds={deadPlayerIds} onEditRole={handleEditRole} />
           </div>
 
           {/* Timeline - Main area */}
