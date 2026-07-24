@@ -141,17 +141,17 @@ export function TimelineTable({
 
   // Determine text color based on action type
   function getActionColor(desc: string): string {
-    if (desc.startsWith("Cắn") || desc.startsWith("Giết") || desc.startsWith("Nguyền")) {
+    if (desc.startsWith("Cắn") || desc.startsWith("Giết")) {
       return "text-red-400";
+    }
+    if (desc.startsWith("Nguyền")) {
+      return "text-orange-400";
     }
     if (desc.startsWith("Cứu")) {
       return "text-green-400";
     }
     if (desc.startsWith("Bảo vệ")) {
       return "text-blue-400";
-    }
-    if (desc.startsWith("Săn cùng")) {
-      return "text-yellow-400";
     }
     if (desc.startsWith("Săn cùng")) {
       return "text-yellow-400";
