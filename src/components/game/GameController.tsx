@@ -38,7 +38,15 @@ export function GameController() {
               <span className="hidden sm:inline">Trận mới</span>
               <span className="sm:hidden">Mới</span>
             </Button>
-            <Button variant="outline" onClick={newGame} size="sm">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (window.confirm("Bạn có chắc muốn reset toàn bộ trò chơi?")) {
+                  newGame();
+                }
+              }}
+              size="sm"
+            >
               <RefreshCw className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Trò chơi mới</span>
               <span className="sm:hidden">Reset</span>

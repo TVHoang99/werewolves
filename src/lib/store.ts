@@ -68,7 +68,7 @@ export const useGameStore = create<GameState>()(
             (a) => a.action === action.action
           );
 
-          const isOneTime = actionConfig && actionConfig.limit === 1;
+          const isOneTime = !!(actionConfig && actionConfig.limit === 1);
           const newRoleStates = { ...state.roleStates };
 
           if (isOneTime) {
@@ -101,12 +101,12 @@ export const useGameStore = create<GameState>()(
                     a.action === action.action
                   )
               );
-              return { ...t, actions: [...filtered, { ...action, used: true }] };
+              return { ...t, actions: [...filtered, { ...action, used: isOneTime }] };
             });
           } else {
             newTimelines = [
               ...state.timelines,
-              { day: currentDay, actions: [{ ...action, used: true }] },
+              { day: currentDay, actions: [{ ...action, used: isOneTime }] },
             ];
           }
 
@@ -132,7 +132,7 @@ export const useGameStore = create<GameState>()(
 
       newMatch: () =>
         set({
-          timelines: [],
+          timelines: [{ day: 1, actions: [] }],
           currentDay: 1,
           roleStates: {},
         }),
