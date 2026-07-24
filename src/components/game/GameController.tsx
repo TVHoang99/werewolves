@@ -31,10 +31,13 @@ export function GameController() {
   const [voteOpen, setVoteOpen] = useState(false);
   const [voteTargetId, setVoteTargetId] = useState("");
 
-  // Calculate all dead player IDs from timelines
+  // Calculate all dead player IDs from timelines (only from previous days, not current day)
   const deadPlayerIds = useMemo(() => {
     const dead = new Set<string>();
     for (const timeline of timelines) {
+      // Only count deaths from previous days
+      if (timeline.day >= currentDay) continue;
+
       const actions = timeline.actions;
 
       // Wolf bite victim
@@ -85,7 +88,7 @@ export function GameController() {
       }
     }
     return dead;
-  }, [timelines]);
+  }, [timelines, currentDay]);
 
   // Get living players for vote
   const livingPlayers = useMemo(() => {

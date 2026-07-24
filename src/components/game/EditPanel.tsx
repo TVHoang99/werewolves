@@ -28,11 +28,15 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
   const roleConfig = roleName ? ROLE_MAP[roleName] : null;
   const players = useGameStore((s) => s.players);
   const timelines = useGameStore((s) => s.timelines);
+  const currentDay = useGameStore((s) => s.currentDay);
 
-  // Calculate dead player IDs
+  // Calculate dead player IDs (only from previous days)
   const deadPlayerIds = useMemo(() => {
     const dead = new Set<string>();
     for (const timeline of timelines) {
+      // Only count deaths from previous days
+      if (timeline.day >= currentDay) continue;
+
       const actions = timeline.actions;
 
       // Wolf bite victim
@@ -83,7 +87,7 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
       }
     }
     return dead;
-  }, [timelines]);
+  }, [timelines, currentDay]);
 
   const actors = roleName
     ? players.filter((p) => {
