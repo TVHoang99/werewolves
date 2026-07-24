@@ -139,6 +139,32 @@ export function TimelineTable({
     }
   };
 
+  // Determine text color based on action type
+  function getActionColor(desc: string): string {
+    if (desc.startsWith("Cắn") || desc.startsWith("Giết") || desc.startsWith("Nguyền")) {
+      return "text-red-400";
+    }
+    if (desc.startsWith("Cứu")) {
+      return "text-green-400";
+    }
+    if (desc.startsWith("Bảo vệ")) {
+      return "text-blue-400";
+    }
+    if (desc.startsWith("Săn cùng")) {
+      return "text-yellow-400";
+    }
+    if (desc.startsWith("Săn cùng")) {
+      return "text-yellow-400";
+    }
+    if (desc.startsWith("Ghép đôi")) {
+      return "text-pink-400";
+    }
+    if (desc.startsWith("Nhận mẹ")) {
+      return "text-purple-400";
+    }
+    return "text-muted-foreground";
+  }
+
   // For a given day and role, get the cell content including one-time lock logic
   function getCellContent(day: number, roleName: RoleName): string[] {
     const roleConfig = ROLE_MAP[roleName];
@@ -295,7 +321,7 @@ export function TimelineTable({
                                   className={`text-[10px] sm:text-xs ${
                                     desc === "Đã dùng"
                                       ? "text-muted-foreground/60 italic"
-                                      : "text-muted-foreground"
+                                      : getActionColor(desc)
                                   }`}
                                 >
                                   {desc}
