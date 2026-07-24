@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROLE_MAP } from "@/lib/roles";
-import type { Player, Timeline as TimelineType, RoleName } from "@/lib/types";
+import type { Player, Timeline as TimelineType, RoleName, RoleAction } from "@/lib/types";
 
 interface TimelineProps {
   players: Player[];
@@ -14,6 +14,54 @@ interface TimelineProps {
   advanceDay: () => void;
 }
 
+function formatAction(
+  action: RoleAction,
+  players: Player[]
+): string {
+  const role = action.role as RoleName;
+  const targetName = (id: string) =>
+    players.find((p) => p.id === id)?.name ?? "???";
+
+  switch (role) {
+    case "soi":
+      if (action.action === "can" && action.target)
+        return `Cắn → ${targetName(action.target)}`;
+      break;
+    case "soi_nguyen":
+      if (action.action === "nguyen" && action.target)
+        return `Nguyền → ${targetName(action.target)}`;
+      break;
+    case "cupid":
+      if (action.action === "ghep_doi" && action.target && action.target2)
+        return `Ghép đôi: ${targetName(action.target)} & ${targetName(action.target2)}`;
+      break;
+    case "tho_san":
+      if (action.action === "san_cung" && action.target)
+        return `Săn cùng → ${targetName(action.target)}`;
+      break;
+    case "bao_ve":
+      if (action.action === "bao_ve" && action.target)
+        return `Bảo vệ → ${targetName(action.target)}`;
+      break;
+    case "phu_thuy":
+      if (action.action === "cuu") return "Cứu";
+      if (action.action === "giet" && action.target)
+        return `Giết → ${targetName(action.target)}`;
+      break;
+    case "mo_coi":
+      if (action.action === "nhan_me") return "Nhận mẹ";
+      break;
+    default:
+      break;
+  }
+
+  const roleConfig = ROLE_MAP[role];
+  const actionConfig = roleConfig?.actions.find((a) => a.action === action.action);
+  const label = actionConfig?.label ?? action.action;
+  if (action.target) return `${label} → ${targetName(action.target)}`;
+  return label;
+}
+
 export function TimelineTable({
   players,
   timelines,
@@ -21,40 +69,53 @@ export function TimelineTable({
   setCurrentDay,
   advanceDay,
 }: TimelineProps) {
-  // Get unique roles present in the game
   const roles = useMemo(() => {
     const roleSet = new Set(players.map((p) => p.role));
-    return Array.from(roleSet);
+    return Array.from(roleSet) as RoleName[];
   }, [players]);
 
-  // Get all days sorted
   const days = useMemo(() => {
     return timelines.map((t) => t.day).sort((a, b) => a - b);
   }, [timelines]);
 
-  // Build lookup: day -> role -> actions
+  // Map: "role|action" → first day it was used
+  const firstUsedDay = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const timeline of timelines) {
+      for (const action of timeline.actions) {
+        const key = `${action.role}|${action.action}`;
+        if (!map.has(key)) {
+          map.set(key, timeline.day);
+        }
+      }
+    }
+    return map;
+  }, [timelines]);
+
+  // Set of one-time action keys
+  const oneTimeActions = useMemo(() => {
+    const set = new Set<string>();
+    for (const role of Object.values(ROLE_MAP)) {
+      for (const action of role.actions) {
+        if (action.limit === 1) {
+          set.add(`${role.name}|${action.action}`);
+        }
+      }
+    }
+    return set;
+  }, []);
+
+  // Build lookup: day → role → actions (formatted)
   const actionMap = useMemo(() => {
     const map: Record<number, Record<string, string[]>> = {};
     for (const timeline of timelines) {
       map[timeline.day] = {};
       for (const action of timeline.actions) {
         const roleName = action.role as RoleName;
-        const roleConfig = ROLE_MAP[roleName];
-        if (!roleConfig) continue;
-
-        const actionConfig = roleConfig.actions.find(
-          (a) => a.action === action.action
-        );
-        const label = actionConfig?.label || action.action;
-        const targetName =
-          action.target ||
-          (players.find((p) => p.id === action.target)?.name ?? "");
-        const desc = targetName ? `${label} → ${targetName}` : label;
-
-        if (!map[timeline.day][action.role]) {
-          map[timeline.day][action.role] = [];
+        if (!map[timeline.day][roleName]) {
+          map[timeline.day][roleName] = [];
         }
-        map[timeline.day][action.role].push(desc);
+        map[timeline.day][roleName].push(formatAction(action, players));
       }
     }
     return map;
@@ -65,6 +126,69 @@ export function TimelineTable({
       setCurrentDay(currentDay - 1);
     }
   };
+
+  // For a given day and role, get the cell content including one-time lock logic
+  function getCellContent(day: number, roleName: RoleName): string[] {
+    const roleConfig = ROLE_MAP[roleName];
+    if (!roleConfig || roleConfig.actions.length === 0) return [];
+
+    const dayActions = actionMap[day]?.[roleName] || [];
+    const result: string[] = [];
+
+    for (const actionConfig of roleConfig.actions) {
+      const key = `${roleName}|${actionConfig.action}`;
+      const isOneTime = actionConfig.limit === 1;
+
+      if (isOneTime) {
+        const usedDay = firstUsedDay.get(key);
+        if (usedDay !== undefined) {
+          if (usedDay === day) {
+            // This day has the action - show formatted description
+            const found = timelines
+              .find((t) => t.day === day)
+              ?.actions.find(
+                (a) => a.role === roleName && a.action === actionConfig.action
+              );
+            if (found) {
+              result.push(formatAction(found, players));
+            }
+          } else {
+            // Used on a previous day - show lock
+            result.push("Đã dùng");
+          }
+        }
+        // If not used yet on any day, don't show anything (will be triggered by action panel)
+      } else {
+        // Unlimited actions - show existing actions for this role
+        // These are already in dayActions, but we want to filter to specific action
+        const matching = timelines
+          .find((t) => t.day === day)
+          ?.actions.filter(
+            (a) => a.role === roleName && a.action === actionConfig.action
+          );
+        if (matching) {
+          for (const m of matching) {
+            const desc = formatAction(m, players);
+            if (!result.includes(desc)) {
+              result.push(desc);
+            }
+          }
+        }
+      }
+    }
+
+    // For roles with no configured actions (dan_lang, role_tuy_chinh), show existing actions
+    if (roleConfig.actions.length === 0 && dayActions.length > 0) {
+      return dayActions;
+    }
+
+    // If no one-time used and no unlimited actions, return what we have
+    if (result.length === 0 && roleConfig.actions.length > 0) {
+      return dayActions;
+    }
+
+    return result.length > 0 ? result : dayActions;
+  }
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-lg overflow-hidden">
@@ -88,18 +212,18 @@ export function TimelineTable({
 
       <div className="overflow-auto max-h-[500px]">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-card z-10">
+          <thead className="sticky top-0 bg-card z-20">
             <tr className="border-b">
-              <th className="text-left p-3 font-medium text-muted-foreground w-20">
+              <th className="text-left p-3 font-medium text-muted-foreground w-24 sticky left-0 bg-card z-30 border-r">
                 Ngày
               </th>
               {roles.map((roleName) => {
-                const roleConfig = ROLE_MAP[roleName as RoleName];
+                const roleConfig = ROLE_MAP[roleName];
                 if (!roleConfig) return null;
                 return (
                   <th
                     key={roleName}
-                    className="text-left p-3 font-medium text-muted-foreground"
+                    className="text-left p-3 font-medium text-muted-foreground whitespace-nowrap"
                   >
                     <div className="flex items-center gap-1.5">
                       <roleConfig.icon className="h-4 w-4" />
@@ -121,34 +245,60 @@ export function TimelineTable({
                 </td>
               </tr>
             ) : (
-              days.map((day) => (
-                <tr
-                  key={day}
-                  className={`border-b last:border-0 ${
-                    day === currentDay ? "bg-primary/5" : ""
-                  }`}
-                >
-                  <td className="p-3 font-medium">Ngày {day}</td>
-                  {roles.map((roleName) => {
-                    const dayActions = actionMap[day]?.[roleName] || [];
-                    return (
-                      <td key={roleName} className="p-3">
-                        {dayActions.length > 0 ? (
-                          <ul className="space-y-1">
-                            {dayActions.map((desc, i) => (
-                              <li key={i} className="text-xs text-muted-foreground">
-                                {desc}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <span className="text-xs text-muted-foreground/50">—</span>
+              days.map((day) => {
+                const isCurrentDay = day === currentDay;
+                return (
+                  <tr
+                    key={day}
+                    onClick={() => setCurrentDay(day)}
+                    className={`border-b last:border-0 cursor-pointer transition-colors ${
+                      isCurrentDay
+                        ? "bg-primary/10 font-medium"
+                        : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <td
+                      className={`p-3 font-medium sticky left-0 z-10 border-r ${
+                        isCurrentDay ? "bg-primary/10" : "bg-card"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {isCurrentDay && (
+                          <span className="h-2 w-2 rounded-full bg-primary inline-block" />
                         )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))
+                        Ngày {day}
+                      </div>
+                    </td>
+                    {roles.map((roleName) => {
+                      const cellContent = getCellContent(day, roleName);
+                      return (
+                        <td key={roleName} className="p-3">
+                          {cellContent.length > 0 ? (
+                            <ul className="space-y-1">
+                              {cellContent.map((desc, i) => (
+                                <li
+                                  key={i}
+                                  className={`text-xs ${
+                                    desc === "Đã dùng"
+                                      ? "text-muted-foreground/60 italic"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {desc}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <span className="text-xs text-muted-foreground/50">
+                              —
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
