@@ -101,17 +101,34 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
     );
   }, [players, deadPlayerIds]);
 
+  // Check if orphan's mother is dead
+  const orphanMotherDead = useMemo(() => {
+    for (const timeline of timelines) {
+      const orphanAction = timeline.actions.find(
+        (a) => a.role === "mo_coi" && a.action === "nhan_me" && a.target
+      );
+      if (orphanAction?.target) {
+        return deadPlayerIds.has(orphanAction.target);
+      }
+    }
+    return false;
+  }, [timelines, deadPlayerIds]);
+
   const renderAction = (actorId: string, isDead: boolean) => {
     // If player is dead and not villager, show dead message
     // Exception: wolves can still bite if other wolves are alive
     if (isDead && roleName !== "dan_lang") {
       if ((roleName === "soi" || roleName === "soi_nguyen") && hasAliveWolves) {
-        // Dead wolf - still show bite action since other wolves are alive
         return <WolfAction actorId={actorId} />;
       }
       return (
         <p className="text-sm text-red-400 italic">Đã chết - Không thể sử dụng kỹ năng</p>
       );
+    }
+
+    // If orphan's mother is dead, orphan becomes wolf
+    if (roleName === "mo_coi" && orphanMotherDead && !isDead) {
+      return <WolfAction actorId={actorId} />;
     }
 
     switch (roleName) {

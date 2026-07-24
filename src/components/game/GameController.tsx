@@ -92,26 +92,44 @@ export function GameController() {
     return players.filter((p) => !deadPlayerIds.has(p.id));
   }, [players, deadPlayerIds]);
 
+  // Check if orphan's mother is dead
+  const orphanMotherDead = useMemo(() => {
+    for (const timeline of timelines) {
+      const orphanAction = timeline.actions.find(
+        (a) => a.role === "mo_coi" && a.action === "nhan_me" && a.target
+      );
+      if (orphanAction?.target) {
+        return deadPlayerIds.has(orphanAction.target);
+      }
+    }
+    return false;
+  }, [timelines, deadPlayerIds]);
+
   // Calculate win conditions
   const gameResult = useMemo(() => {
     const alivePlayers = players.filter((p) => !deadPlayerIds.has(p.id));
     const aliveWolves = alivePlayers.filter(
       (p) => p.role === "soi" || p.role === "soi_nguyen"
     );
+    // Include orphan as wolf if mother is dead
+    const aliveOrphan = alivePlayers.filter(
+      (p) => p.role === "mo_coi" && orphanMotherDead
+    );
+    const totalAliveWolves = aliveWolves.length + aliveOrphan.length;
     const aliveNonWolves = alivePlayers.filter(
-      (p) => p.role !== "soi" && p.role !== "soi_nguyen"
+      (p) => p.role !== "soi" && p.role !== "soi_nguyen" && !(p.role === "mo_coi" && orphanMotherDead)
     );
 
     // Wolves win if wolves >= non-wolves
-    if (aliveWolves.length >= aliveNonWolves.length && aliveWolves.length > 0) {
+    if (totalAliveWolves >= aliveNonWolves.length && totalAliveWolves > 0) {
       return "wolves";
     }
     // Villagers win if no wolves left
-    if (aliveWolves.length === 0 && aliveNonWolves.length > 0) {
+    if (totalAliveWolves === 0 && aliveNonWolves.length > 0) {
       return "villagers";
     }
     return null;
-  }, [players, deadPlayerIds]);
+  }, [players, deadPlayerIds, orphanMotherDead]);
 
   const handleEditRole = (roleName: RoleName) => {
     setEditRole(roleName);
@@ -183,7 +201,7 @@ export function GameController() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Role List - Sidebar */}
           <div className="lg:col-span-1 order-2 lg:order-1">
-            <RoleList players={players} deadPlayerIds={deadPlayerIds} onEditRole={handleEditRole} />
+            <RoleList players={players} deadPlayerIds={deadPlayerIds} timelines={timelines} onEditRole={handleEditRole} />
           </div>
 
           {/* Timeline - Main area */}

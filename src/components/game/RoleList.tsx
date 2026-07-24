@@ -4,15 +4,29 @@ import { useMemo } from "react";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROLE_MAP } from "@/lib/roles";
-import type { Player, RoleName } from "@/lib/types";
+import type { Player, RoleName, Timeline } from "@/lib/types";
 
 interface RoleListProps {
   players: Player[];
   deadPlayerIds: Set<string>;
+  timelines: Timeline[];
   onEditRole: (roleName: RoleName) => void;
 }
 
-export function RoleList({ players, deadPlayerIds, onEditRole }: RoleListProps) {
+export function RoleList({ players, deadPlayerIds, timelines, onEditRole }: RoleListProps) {
+  // Check if orphan's mother is dead
+  const orphanMotherDead = useMemo(() => {
+    for (const timeline of timelines) {
+      const orphanAction = timeline.actions.find(
+        (a) => a.role === "mo_coi" && a.action === "nhan_me" && a.target
+      );
+      if (orphanAction?.target) {
+        return deadPlayerIds.has(orphanAction.target);
+      }
+    }
+    return false;
+  }, [timelines, deadPlayerIds]);
+
   const grouped = useMemo(() => {
     const groups: Record<string, Player[]> = {};
     for (const player of players) {
@@ -29,9 +43,17 @@ export function RoleList({ players, deadPlayerIds, onEditRole }: RoleListProps) 
         }
         groups["soi"].push(player);
       }
+
+      // If orphan's mother is dead, orphan becomes wolf
+      if (player.role === "mo_coi" && orphanMotherDead) {
+        if (!groups["soi"]) {
+          groups["soi"] = [];
+        }
+        groups["soi"].push(player);
+      }
     }
     return groups;
-  }, [players]);
+  }, [players, orphanMotherDead]);
 
   const roleNames = Object.keys(grouped);
 
