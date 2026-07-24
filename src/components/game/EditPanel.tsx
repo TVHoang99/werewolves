@@ -11,6 +11,11 @@ import { ROLE_MAP } from "@/lib/roles";
 import type { RoleName } from "@/lib/types";
 import { WolfAction } from "./RoleActions/WolfAction";
 import { AlphaWolfAction } from "./RoleActions/AlphaWolfAction";
+import { CupidAction } from "./RoleActions/CupidAction";
+import { HunterAction } from "./RoleActions/HunterAction";
+import { GuardAction } from "./RoleActions/GuardAction";
+import { WitchAction } from "./RoleActions/WitchAction";
+import { OrphanAction } from "./RoleActions/OrphanAction";
 
 interface EditPanelProps {
   open: boolean;
@@ -32,6 +37,16 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
         return <WolfAction actorId={actorId} />;
       case "soi_nguyen":
         return <AlphaWolfAction actorId={actorId} />;
+      case "cupid":
+        return <CupidAction actorId={actorId} />;
+      case "tho_san":
+        return <HunterAction actorId={actorId} />;
+      case "bao_ve":
+        return <GuardAction actorId={actorId} />;
+      case "phu_thuy":
+        return <WitchAction actorId={actorId} />;
+      case "mo_coi":
+        return <OrphanAction actorId={actorId} />;
       default:
         return (
           <p className="text-sm text-muted-foreground">Sắp ra mắt...</p>
