@@ -274,31 +274,15 @@ export function TimelineTable({
         // If not used yet on any day, don't show anything (will be triggered by action panel)
       } else {
         // Unlimited actions - show existing actions for this role
-        // For vote action, show on all days after it was first used
+        // For vote action, only show on the day it was performed
         if (actionConfig.action === "vote") {
-          const usedDay = firstUsedDay.get(key);
-          if (usedDay !== undefined) {
-            if (usedDay === day) {
-              // This day has the action - show formatted description
-              const found = timelines
-                .find((t) => t.day === day)
-                ?.actions.find(
-                  (a) => a.role === roleName && a.action === actionConfig.action
-                );
-              if (found) {
-                result.push(formatAction(found, players, timelines, day));
-              }
-            } else {
-              // Used on a previous day - show with strikethrough
-              const found = timelines
-                .find((t) => t.day === usedDay)
-                ?.actions.find(
-                  (a) => a.role === roleName && a.action === actionConfig.action
-                );
-              if (found) {
-                result.push(formatAction(found, players, timelines, usedDay));
-              }
-            }
+          const found = timelines
+            .find((t) => t.day === day)
+            ?.actions.find(
+              (a) => a.role === roleName && a.action === actionConfig.action
+            );
+          if (found) {
+            result.push(formatAction(found, players, timelines, day));
           }
         } else {
           // Other unlimited actions - show existing actions for this role
