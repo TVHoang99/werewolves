@@ -102,12 +102,8 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
     // Exception: wolves can still bite if other wolves are alive
     if (isDead && roleName !== "dan_lang") {
       if ((roleName === "soi" || roleName === "soi_nguyen") && hasAliveWolves) {
-        // Dead wolf - show message but still allow bite if other wolves alive
-        return (
-          <div className="space-y-2">
-            <p className="text-sm text-yellow-400 italic">Đã chết - Sói khác sẽ thực hiện</p>
-          </div>
-        );
+        // Dead wolf - still show bite action since other wolves are alive
+        return <WolfAction actorId={actorId} />;
       }
       return (
         <p className="text-sm text-red-400 italic">Đã chết - Không thể sử dụng kỹ năng</p>
