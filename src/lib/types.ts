@@ -21,9 +21,19 @@ export interface Timeline {
   actions: RoleAction[];
 }
 
+export interface MatchHistory {
+  id: string;
+  createdAt: string;
+  players: Player[];
+  timelines: Timeline[];
+  winner: "wolves" | "villagers" | "couple" | null;
+  totalDays: number;
+}
+
 export type RoleName =
   | "soi"
   | "soi_nguyen"
+  | "tien_tri"
   | "cupid"
   | "tho_san"
   | "bao_ve"
@@ -45,4 +55,5 @@ export interface RoleConfig {
   icon: LucideIcon;
   actions: RoleActionConfig[];
   isWolf: boolean;
+  maxPlayers: number; // 0 = unlimited, 1 = one player only, etc.
 }

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROLE_MAP } from "@/lib/roles";
+import { getDeathsForDay } from "@/lib/gameUtils";
 import type { Player, Timeline as TimelineType, RoleName, RoleAction } from "@/lib/types";
 
 interface TimelineProps {
@@ -33,6 +34,23 @@ function formatAction(
     case "soi_nguyen":
       if (action.action === "nguyen" && action.target)
         return `Nguyền → ${targetName(action.target)}`;
+      break;
+    case "tien_tri":
+      if (action.action === "soi" && action.target) {
+        const targetPlayer = players.find((p) => p.id === action.target);
+        const targetRole = targetPlayer ? ROLE_MAP[targetPlayer.role as RoleName] : null;
+        const targetDay = day ?? action.day;
+        const isCursedBeforeDay = timelines.some(
+          (t) =>
+            t.day < targetDay &&
+            t.actions.some(
+              (a) => a.role === "soi_nguyen" && a.action === "nguyen" && a.target === action.target
+            )
+        );
+        const isWolf = targetRole?.isWolf || isCursedBeforeDay;
+        const faction = isWolf ? "Sói" : "Dân";
+        return `Soi → ${targetName(action.target)} (${faction})`;
+      }
       break;
     case "cupid":
       if (action.action === "ghep_doi" && action.target && action.target2)
@@ -150,97 +168,7 @@ export function TimelineTable({
 
   // Calculate deaths for a given day
   function getDeaths(day: number): string[] {
-    const dayTimeline = timelines.find((t) => t.day === day);
-    if (!dayTimeline) return [];
-
-    const deaths: string[] = [];
-    const deadIds = new Set<string>();
-    const targetName = (id: string) =>
-      players.find((p) => p.id === id)?.name ?? "???";
-
-    const actions = dayTimeline.actions;
-
-    // Find wolf bite target
-    const wolfBite = actions.find((a) => a.role === "soi" && a.action === "can");
-    // Find guard protection
-    const guardProtect = actions.find((a) => a.role === "bao_ve" && a.action === "bao_ve");
-    // Find witch save
-    const witchSave = actions.find((a) => a.role === "phu_thuy" && a.action === "cuu");
-    // Find witch kill
-    const witchKill = actions.find((a) => a.role === "phu_thuy" && a.action === "giet");
-
-    // Wolf bite victim dies unless protected or saved
-    if (wolfBite?.target) {
-      const isProtected = guardProtect?.target === wolfBite.target;
-      const isSaved = witchSave;
-      if (!isProtected && !isSaved) {
-        deaths.push(targetName(wolfBite.target));
-        deadIds.add(wolfBite.target);
-      }
-    }
-
-    // Witch kill victim dies
-    if (witchKill?.target) {
-      deaths.push(targetName(witchKill.target));
-      deadIds.add(witchKill.target);
-    }
-
-    // Vote results - most votes = death
-    const voteActions = actions.filter((a) => a.role === "dan_lang" && a.action === "vote" && a.target);
-    if (voteActions.length > 0) {
-      const voteCounts: Record<string, number> = {};
-      for (const vote of voteActions) {
-        if (vote.target) {
-          voteCounts[vote.target] = (voteCounts[vote.target] || 0) + 1;
-        }
-      }
-      let maxVotes = 0;
-      let maxVotedId = "";
-      for (const [playerId, count] of Object.entries(voteCounts)) {
-        if (count > maxVotes) {
-          maxVotes = count;
-          maxVotedId = playerId;
-        }
-      }
-      if (maxVotedId && maxVotes > 0) {
-        deaths.push(targetName(maxVotedId));
-        deadIds.add(maxVotedId);
-      }
-    }
-
-    // Check Cupid pairs - if one dies, partner also dies
-    const cupidAction = actions.find((a) => a.role === "cupid" && a.action === "ghep_doi");
-    if (cupidAction?.target && cupidAction?.target2) {
-      const partner1Dead = deadIds.has(cupidAction.target);
-      const partner2Dead = deadIds.has(cupidAction.target2);
-      if (partner1Dead && !deadIds.has(cupidAction.target2)) {
-        deaths.push(targetName(cupidAction.target2));
-        deadIds.add(cupidAction.target2);
-      }
-      if (partner2Dead && !deadIds.has(cupidAction.target)) {
-        deaths.push(targetName(cupidAction.target));
-        deadIds.add(cupidAction.target);
-      }
-    }
-
-    // Check Hunter - if hunter dies, they can take someone with them
-    const hunters = players.filter((p) => p.role === "tho_san");
-    for (const hunter of hunters) {
-      if (deadIds.has(hunter.id)) {
-        // Find hunter's "săn cùng" target from any day
-        for (const t of timelines) {
-          const hunterAction = t.actions.find(
-            (a) => a.actor === hunter.id && a.action === "san_cung" && a.target
-          );
-          if (hunterAction?.target && !deadIds.has(hunterAction.target)) {
-            deaths.push(targetName(hunterAction.target));
-            deadIds.add(hunterAction.target);
-          }
-        }
-      }
-    }
-
-    return deaths;
+    return getDeathsForDay(players, timelines, day);
   }
 
   // Determine text color based on action type
@@ -250,6 +178,9 @@ export function TimelineTable({
     }
     if (desc.startsWith("Nguyền")) {
       return "text-orange-400";
+    }
+    if (desc.startsWith("Soi")) {
+      return "text-cyan-400 font-medium";
     }
     if (desc.startsWith("Cứu")) {
       return "text-green-400";

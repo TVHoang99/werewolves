@@ -12,6 +12,7 @@ interface PlayerRowProps {
   onRoleChange: (role: string) => void;
   onNameChange: (name: string) => void;
   onDelete: () => void;
+  disabledValues?: Set<string>;
 }
 
 export function PlayerRow({
@@ -21,6 +22,7 @@ export function PlayerRow({
   onRoleChange,
   onNameChange,
   onDelete,
+  disabledValues,
 }: PlayerRowProps) {
   return (
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 animate-in slide-in-from-top-2 duration-200">
@@ -29,6 +31,7 @@ export function PlayerRow({
           value={role}
           onValueChange={onRoleChange}
           className="flex-1"
+          disabledValues={disabledValues}
         />
         <div className="hidden sm:flex items-center gap-2 text-muted-foreground">:</div>
         <Input

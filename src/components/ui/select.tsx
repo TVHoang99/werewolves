@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 
@@ -17,6 +18,7 @@ export interface SelectProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  disabledValues?: Set<string>;
 }
 
 export function Select({
@@ -26,19 +28,63 @@ export function Select({
   placeholder = "Select...",
   className,
   disabled,
+  disabledValues,
 }: SelectProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [highlightedIndex, setHighlightedIndex] = React.useState(-1);
+  const [coords, setCoords] = React.useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+  } | null>(null);
+  const [mounted, setMounted] = React.useState(false);
+
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
   const listRef = React.useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((o) => o.value === value);
 
   React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updateCoords = React.useCallback(() => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpwards = spaceBelow < 220 && rect.top > spaceBelow;
+
+      setCoords({
+        top: openUpwards ? undefined : rect.bottom + 4,
+        bottom: openUpwards ? window.innerHeight - rect.top + 4 : undefined,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      updateCoords();
+      const handleScrollOrResize = () => updateCoords();
+      window.addEventListener("scroll", handleScrollOrResize, true);
+      window.addEventListener("resize", handleScrollOrResize);
+      return () => {
+        window.removeEventListener("scroll", handleScrollOrResize, true);
+        window.removeEventListener("resize", handleScrollOrResize);
+      };
+    }
+  }, [isOpen, updateCoords]);
+
+  React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(e.target as Node) &&
+        listRef.current &&
+        !listRef.current.contains(e.target as Node)
       ) {
         setIsOpen(false);
       }
@@ -46,12 +92,6 @@ export function Select({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  React.useEffect(() => {
-    if (isOpen && listRef.current) {
-      listRef.current.scrollIntoView({ block: "nearest" });
-    }
-  }, [isOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return;
@@ -90,9 +130,69 @@ export function Select({
     }
   };
 
+  const dropdownMenu =
+    isOpen && mounted && coords
+      ? createPortal(
+          <div
+            ref={listRef}
+            role="listbox"
+            style={{
+              position: "fixed",
+              top: coords.top !== undefined ? `${coords.top}px` : undefined,
+              bottom:
+                coords.bottom !== undefined ? `${coords.bottom}px` : undefined,
+              left: `${coords.left}px`,
+              width: `${coords.width}px`,
+            }}
+            className={cn(
+              "z-[9999] max-h-56 overflow-y-auto rounded-lg border bg-popover text-popover-foreground p-1 shadow-2xl animate-in fade-in-0 zoom-in-95"
+            )}
+          >
+            {options.map((option, index) => {
+              const isOptionDisabled =
+                disabledValues?.has(option.value) && option.value !== value;
+              return (
+                <div
+                  key={option.value}
+                  role="option"
+                  aria-selected={option.value === value}
+                  aria-disabled={isOptionDisabled}
+                  className={cn(
+                    "relative flex select-none items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none transition-colors",
+                    isOptionDisabled
+                      ? "cursor-not-allowed opacity-40"
+                      : "cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                    option.value === value &&
+                      "bg-accent text-accent-foreground font-medium",
+                    index === highlightedIndex &&
+                      !isOptionDisabled &&
+                      "bg-accent text-accent-foreground"
+                  )}
+                  onClick={() => {
+                    if (isOptionDisabled) return;
+                    onValueChange(option.value);
+                    setIsOpen(false);
+                  }}
+                  onMouseEnter={() =>
+                    !isOptionDisabled && setHighlightedIndex(index)
+                  }
+                >
+                  {option.icon && (
+                    <span className="flex-shrink-0">{option.icon}</span>
+                  )}
+                  <span className="truncate">{option.label}</span>
+                </div>
+              );
+            })}
+          </div>,
+          document.body
+        )
+      : null;
+
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
@@ -118,39 +218,7 @@ export function Select({
         />
       </button>
 
-      {isOpen && (
-        <div
-          ref={listRef}
-          role="listbox"
-          className={cn(
-            "absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
-          )}
-        >
-          {options.map((option, index) => (
-            <div
-              key={option.value}
-              role="option"
-              aria-selected={option.value === value}
-              className={cn(
-                "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
-                option.value === value &&
-                  "bg-accent text-accent-foreground",
-                index === highlightedIndex && "bg-accent text-accent-foreground"
-              )}
-              onClick={() => {
-                onValueChange(option.value);
-                setIsOpen(false);
-              }}
-              onMouseEnter={() => setHighlightedIndex(index)}
-            >
-              {option.icon && (
-                <span className="flex-shrink-0">{option.icon}</span>
-              )}
-              <span className="truncate">{option.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {dropdownMenu}
     </div>
   );
 }

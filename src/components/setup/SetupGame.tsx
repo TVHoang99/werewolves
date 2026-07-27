@@ -1,20 +1,40 @@
 "use client";
 
-import { Plus, Swords } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Swords, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlayerRow } from "./PlayerRow";
 import { useGameStore } from "@/lib/store";
+import { ROLE_MAP } from "@/lib/roles";
+import { HistoryModal } from "@/components/game/HistoryModal";
 
 export function SetupGame() {
   const players = useGameStore((s) => s.players);
+  const history = useGameStore((s) => s.history) || [];
   const addPlayer = useGameStore((s) => s.addPlayer);
   const removePlayer = useGameStore((s) => s.removePlayer);
   const updatePlayer = useGameStore((s) => s.updatePlayer);
   const startGame = useGameStore((s) => s.startGame);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const handleAddRole = () => {
     addPlayer("dan_lang", "");
   };
+
+  // Calculate which roles have reached their maxPlayers limit
+  const disabledRoles = useMemo(() => {
+    const roleCounts: Record<string, number> = {};
+    for (const player of players) {
+      roleCounts[player.role] = (roleCounts[player.role] || 0) + 1;
+    }
+    const disabled = new Set<string>();
+    for (const [roleName, config] of Object.entries(ROLE_MAP)) {
+      if (config.maxPlayers > 0 && (roleCounts[roleName] || 0) >= config.maxPlayers) {
+        disabled.add(roleName);
+      }
+    }
+    return disabled;
+  }, [players]);
 
   const canStart = players.length >= 2 && players.every((p) => p.role && p.name.trim());
 
@@ -24,10 +44,20 @@ export function SetupGame() {
         {/* Card */}
         <div className="rounded-xl border bg-card text-card-foreground shadow-lg p-6 sm:p-8 animate-in fade-in duration-300">
           {/* Header */}
-          <div className="text-center mb-6 sm:mb-8">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
               Thêm vai và người chơi
             </h1>
+            {history.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setHistoryOpen(true)}
+              >
+                <History className="h-4 w-4 mr-1.5" />
+                Lịch sử ({history.length})
+              </Button>
+            )}
           </div>
 
           {/* Player Rows */}
@@ -45,6 +75,7 @@ export function SetupGame() {
                   updatePlayer(player.id, player.role, name)
                 }
                 onDelete={() => removePlayer(player.id)}
+                disabledValues={disabledRoles}
               />
             ))}
           </div>
@@ -82,6 +113,8 @@ export function SetupGame() {
           </div>
         </div>
       </div>
+
+      <HistoryModal open={historyOpen} onOpenChange={setHistoryOpen} />
     </div>
   );
 }

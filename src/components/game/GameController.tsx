@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { RotateCcw, RefreshCw } from "lucide-react";
+import { RotateCcw, RefreshCw, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import {
@@ -13,7 +13,9 @@ import {
 import { RoleList } from "./RoleList";
 import { TimelineTable } from "./Timeline";
 import { EditPanel } from "./EditPanel";
+import { HistoryModal } from "./HistoryModal";
 import { useGameStore } from "@/lib/store";
+import { calculateDeadPlayerIds, calculateDeadPlayerIdsForVote } from "@/lib/gameUtils";
 import type { RoleName } from "@/lib/types";
 
 export function GameController() {
@@ -30,102 +32,18 @@ export function GameController() {
   const [editPanelOpen, setEditPanelOpen] = useState(false);
   const [voteOpen, setVoteOpen] = useState(false);
   const [voteTargetId, setVoteTargetId] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Calculate all dead player IDs from timelines (only from previous days, not current day)
   const deadPlayerIds = useMemo(() => {
-    const dead = new Set<string>();
-    const deadThisRound = new Set<string>(); // Track deaths this round for hunter check
+    return calculateDeadPlayerIds(players, timelines, currentDay);
+  }, [players, timelines, currentDay]);
 
-    for (const timeline of timelines) {
-      // Only count deaths from previous days
-      if (timeline.day >= currentDay) continue;
-
-      deadThisRound.clear();
-      const actions = timeline.actions;
-
-      // Wolf bite victim
-      const wolfBite = actions.find((a) => a.role === "soi" && a.action === "can");
-      const guardProtect = actions.find((a) => a.role === "bao_ve" && a.action === "bao_ve");
-      const witchSave = actions.find((a) => a.role === "phu_thuy" && a.action === "cuu");
-
-      if (wolfBite?.target) {
-        const isProtected = guardProtect?.target === wolfBite.target;
-        const isSaved = witchSave;
-        if (!isProtected && !isSaved) {
-          dead.add(wolfBite.target);
-          deadThisRound.add(wolfBite.target);
-        }
-      }
-
-      // Witch kill
-      const witchKill = actions.find((a) => a.role === "phu_thuy" && a.action === "giet");
-      if (witchKill?.target) {
-        dead.add(witchKill.target);
-        deadThisRound.add(witchKill.target);
-      }
-
-      // Vote results
-      const voteActions = actions.filter((a) => a.role === "dan_lang" && a.action === "vote" && a.target);
-      if (voteActions.length > 0) {
-        const voteCounts: Record<string, number> = {};
-        for (const vote of voteActions) {
-          if (vote.target) {
-            voteCounts[vote.target] = (voteCounts[vote.target] || 0) + 1;
-          }
-        }
-        let maxVotes = 0;
-        let maxVotedId = "";
-        for (const [playerId, count] of Object.entries(voteCounts)) {
-          if (count > maxVotes) {
-            maxVotes = count;
-            maxVotedId = playerId;
-          }
-        }
-        if (maxVotedId && maxVotes > 0) {
-          dead.add(maxVotedId);
-          deadThisRound.add(maxVotedId);
-        }
-      }
-
-      // Check Cupid pairs - if one dies, partner also dies
-      const cupidAction = actions.find((a) => a.role === "cupid" && a.action === "ghep_doi");
-      if (cupidAction?.target && cupidAction?.target2) {
-        const partner1Dead = deadThisRound.has(cupidAction.target);
-        const partner2Dead = deadThisRound.has(cupidAction.target2);
-        if (partner1Dead && !dead.has(cupidAction.target2)) {
-          dead.add(cupidAction.target2);
-          deadThisRound.add(cupidAction.target2);
-        }
-        if (partner2Dead && !dead.has(cupidAction.target)) {
-          dead.add(cupidAction.target);
-          deadThisRound.add(cupidAction.target);
-        }
-      }
-
-      // Check Hunter - if hunter dies, they can take someone with them
-      const hunters = players.filter((p) => p.role === "tho_san");
-      for (const hunter of hunters) {
-        if (deadThisRound.has(hunter.id)) {
-          // Find hunter's "săn cùng" target from any day
-          for (const t of timelines) {
-            const hunterAction = t.actions.find(
-              (a) => a.actor === hunter.id && a.action === "san_cung" && a.target
-            );
-            if (hunterAction?.target && !dead.has(hunterAction.target)) {
-              dead.add(hunterAction.target);
-              deadThisRound.add(hunterAction.target);
-            }
-          }
-        }
-      }
-    }
-    return dead;
-  }, [timelines, currentDay, players]);
-
-  // Get living players for vote
+  // Get living players eligible for vote (excluding previous dead & current night dead)
   const livingPlayers = useMemo(() => {
-    return players.filter((p) => !deadPlayerIds.has(p.id));
-  }, [players, deadPlayerIds]);
+    const deadForVote = calculateDeadPlayerIdsForVote(players, timelines, currentDay);
+    return players.filter((p) => !deadForVote.has(p.id));
+  }, [players, timelines, currentDay]);
 
   // Check if orphan's mother is dead
   const orphanMotherDead = useMemo(() => {
@@ -140,6 +58,20 @@ export function GameController() {
     return false;
   }, [timelines, deadPlayerIds]);
 
+  // Cursed players from previous days
+  const cursedPlayerIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const timeline of timelines) {
+      if (timeline.day >= currentDay) continue;
+      for (const action of timeline.actions) {
+        if (action.role === "soi_nguyen" && action.action === "nguyen" && action.target) {
+          set.add(action.target);
+        }
+      }
+    }
+    return set;
+  }, [timelines, currentDay]);
+
   // Calculate win conditions
   const gameResult = useMemo(() => {
     const alivePlayers = players.filter((p) => !deadPlayerIds.has(p.id));
@@ -150,10 +82,59 @@ export function GameController() {
     const aliveOrphan = alivePlayers.filter(
       (p) => p.role === "mo_coi" && orphanMotherDead
     );
-    const totalAliveWolves = aliveWolves.length + aliveOrphan.length;
-    const aliveNonWolves = alivePlayers.filter(
-      (p) => p.role !== "soi" && p.role !== "soi_nguyen" && !(p.role === "mo_coi" && orphanMotherDead)
+    // Include cursed players as wolves if cursed on a previous day
+    const aliveCursed = alivePlayers.filter(
+      (p) =>
+        cursedPlayerIds.has(p.id) &&
+        p.role !== "soi" &&
+        p.role !== "soi_nguyen" &&
+        !(p.role === "mo_coi" && orphanMotherDead)
     );
+    const totalAliveWolves =
+      aliveWolves.length + aliveOrphan.length + aliveCursed.length;
+    const aliveNonWolves = alivePlayers.filter(
+      (p) =>
+        p.role !== "soi" &&
+        p.role !== "soi_nguyen" &&
+        !(p.role === "mo_coi" && orphanMotherDead) &&
+        !cursedPlayerIds.has(p.id)
+    );
+
+    // Check couple (third faction) win condition
+    // Find Cupid's pair action from any timeline
+    let cupidPair: { target: string; target2: string } | null = null;
+    for (const timeline of timelines) {
+      const cupidAction = timeline.actions.find(
+        (a) => a.role === "cupid" && a.action === "ghep_doi" && a.target && a.target2
+      );
+      if (cupidAction?.target && cupidAction?.target2) {
+        cupidPair = { target: cupidAction.target, target2: cupidAction.target2 };
+        break;
+      }
+    }
+
+    if (cupidPair) {
+      const partner1 = players.find((p) => p.id === cupidPair!.target);
+      const partner2 = players.find((p) => p.id === cupidPair!.target2);
+
+      if (partner1 && partner2) {
+        // Check if it's a third faction (one wolf + one non-wolf)
+        const isWolf = (p: typeof partner1) =>
+          p.role === "soi" ||
+          p.role === "soi_nguyen" ||
+          (p.role === "mo_coi" && orphanMotherDead) ||
+          cursedPlayerIds.has(p.id);
+        const oneIsWolf = isWolf(partner1) !== isWolf(partner2);
+
+        if (oneIsWolf) {
+          // Third faction: if both alive and they are the only 2 survivors
+          const bothAlive = !deadPlayerIds.has(partner1.id) && !deadPlayerIds.has(partner2.id);
+          if (bothAlive && alivePlayers.length === 2) {
+            return "couple";
+          }
+        }
+      }
+    }
 
     // Wolves win if wolves >= non-wolves
     if (totalAliveWolves >= aliveNonWolves.length && totalAliveWolves > 0) {
@@ -164,7 +145,7 @@ export function GameController() {
       return "villagers";
     }
     return null;
-  }, [players, deadPlayerIds, orphanMotherDead]);
+  }, [players, deadPlayerIds, orphanMotherDead, cursedPlayerIds, timelines]);
 
   const handleEditRole = (roleName: RoleName) => {
     setEditRole(roleName);
@@ -194,6 +175,11 @@ export function GameController() {
             <Button variant="destructive" onClick={() => setVoteOpen(true)} size="sm">
               Vote
             </Button>
+            <Button variant="outline" onClick={() => setHistoryOpen(true)} size="sm">
+              <History className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Lịch sử</span>
+              <span className="sm:hidden">Sử</span>
+            </Button>
             <Button variant="outline" onClick={newMatch} size="sm">
               <RotateCcw className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Trận mới</span>
@@ -221,12 +207,16 @@ export function GameController() {
             className={`mb-6 p-4 rounded-lg text-center ${
               gameResult === "wolves"
                 ? "bg-red-500/20 border border-red-500/50 text-red-400"
+                : gameResult === "couple"
+                ? "bg-pink-500/20 border border-pink-500/50 text-pink-400"
                 : "bg-green-500/20 border border-green-500/50 text-green-400"
             }`}
           >
             <p className="text-lg font-bold">
               {gameResult === "wolves"
                 ? "Sói thắng! Số sói >= Số người còn lại"
+                : gameResult === "couple"
+                ? "💕 Cặp đôi thắng! Phe thứ 3 là 2 người sống sót cuối cùng"
                 : "Dân làng thắng! Không còn sói nào"}
             </p>
           </div>
@@ -236,7 +226,7 @@ export function GameController() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Role List - Sidebar */}
           <div className="lg:col-span-1 order-2 lg:order-1">
-            <RoleList players={players} deadPlayerIds={deadPlayerIds} timelines={timelines} onEditRole={handleEditRole} />
+            <RoleList players={players} deadPlayerIds={deadPlayerIds} timelines={timelines} currentDay={currentDay} onEditRole={handleEditRole} />
           </div>
 
           {/* Timeline - Main area */}
@@ -282,6 +272,9 @@ export function GameController() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* History Modal */}
+      <HistoryModal open={historyOpen} onOpenChange={setHistoryOpen} />
     </div>
   );
 }

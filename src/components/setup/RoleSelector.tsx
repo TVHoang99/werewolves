@@ -7,6 +7,7 @@ interface RoleSelectorProps {
   value: string;
   onValueChange: (value: string) => void;
   className?: string;
+  disabledValues?: Set<string>;
 }
 
 const roleOptions: SelectOption[] = ROLES.map((role) => ({
@@ -19,6 +20,7 @@ export function RoleSelector({
   value,
   onValueChange,
   className,
+  disabledValues,
 }: RoleSelectorProps) {
   return (
     <Select
@@ -27,6 +29,7 @@ export function RoleSelector({
       options={roleOptions}
       placeholder="Chọn vai..."
       className={className}
+      disabledValues={disabledValues}
     />
   );
 }

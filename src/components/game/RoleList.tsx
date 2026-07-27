@@ -1,8 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Pencil } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ROLE_MAP } from "@/lib/roles";
 import type { Player, RoleName, Timeline } from "@/lib/types";
 
@@ -10,10 +8,11 @@ interface RoleListProps {
   players: Player[];
   deadPlayerIds: Set<string>;
   timelines: Timeline[];
+  currentDay: number;
   onEditRole: (roleName: RoleName) => void;
 }
 
-export function RoleList({ players, deadPlayerIds, timelines, onEditRole }: RoleListProps) {
+export function RoleList({ players, deadPlayerIds, timelines, currentDay, onEditRole }: RoleListProps) {
   // Check if orphan's mother is dead
   const orphanMotherDead = useMemo(() => {
     for (const timeline of timelines) {
@@ -26,6 +25,20 @@ export function RoleList({ players, deadPlayerIds, timelines, onEditRole }: Role
     }
     return false;
   }, [timelines, deadPlayerIds]);
+
+  // Cursed players from previous days
+  const cursedPlayerIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const timeline of timelines) {
+      if (timeline.day >= currentDay) continue;
+      for (const action of timeline.actions) {
+        if (action.role === "soi_nguyen" && action.action === "nguyen" && action.target) {
+          set.add(action.target);
+        }
+      }
+    }
+    return set;
+  }, [timelines, currentDay]);
 
   const grouped = useMemo(() => {
     const groups: Record<string, Player[]> = {};
@@ -41,7 +54,9 @@ export function RoleList({ players, deadPlayerIds, timelines, onEditRole }: Role
         if (!groups["soi"]) {
           groups["soi"] = [];
         }
-        groups["soi"].push(player);
+        if (!groups["soi"].some((p) => p.id === player.id)) {
+          groups["soi"].push(player);
+        }
       }
 
       // If orphan's mother is dead, orphan becomes wolf
@@ -49,11 +64,23 @@ export function RoleList({ players, deadPlayerIds, timelines, onEditRole }: Role
         if (!groups["soi"]) {
           groups["soi"] = [];
         }
-        groups["soi"].push(player);
+        if (!groups["soi"].some((p) => p.id === player.id)) {
+          groups["soi"].push(player);
+        }
+      }
+
+      // If cursed on a previous day, player gets added to wolf group as well
+      if (cursedPlayerIds.has(player.id)) {
+        if (!groups["soi"]) {
+          groups["soi"] = [];
+        }
+        if (!groups["soi"].some((p) => p.id === player.id)) {
+          groups["soi"].push(player);
+        }
       }
     }
     return groups;
-  }, [players, orphanMotherDead]);
+  }, [players, orphanMotherDead, cursedPlayerIds]);
 
   const roleNames = Object.keys(grouped);
 
@@ -72,11 +99,13 @@ export function RoleList({ players, deadPlayerIds, timelines, onEditRole }: Role
             if (!roleConfig) return null;
             const Icon = roleConfig.icon;
             const rolePlayers = grouped[roleName];
+            const aliveCount = rolePlayers.filter((p) => !deadPlayerIds.has(p.id)).length;
 
             return (
               <div
                 key={roleName}
-                className="rounded-lg border bg-secondary/50 p-3 sm:p-4 transition-colors duration-150 hover:bg-secondary/70"
+                className="rounded-lg border bg-secondary/50 p-3 sm:p-4 transition-colors duration-150 hover:bg-secondary/70 cursor-pointer"
+                onClick={() => onEditRole(roleName as RoleName)}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -85,18 +114,9 @@ export function RoleList({ players, deadPlayerIds, timelines, onEditRole }: Role
                       {roleConfig.label}
                     </span>
                     <span className="text-xs sm:text-sm text-muted-foreground">
-                      ({rolePlayers.length})
+                      ({aliveCount})
                     </span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onEditRole(roleName as RoleName)}
-                    className="h-8"
-                  >
-                    <Pencil className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                    Sửa
-                  </Button>
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">

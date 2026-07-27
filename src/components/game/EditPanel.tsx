@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { useGameStore } from "@/lib/store";
 import { ROLE_MAP } from "@/lib/roles";
+import { calculateDeadPlayerIds } from "@/lib/gameUtils";
 import type { RoleName } from "@/lib/types";
 import { WolfAction } from "./RoleActions/WolfAction";
 import { AlphaWolfAction } from "./RoleActions/AlphaWolfAction";
@@ -17,6 +18,7 @@ import { HunterAction } from "./RoleActions/HunterAction";
 import { GuardAction } from "./RoleActions/GuardAction";
 import { WitchAction } from "./RoleActions/WitchAction";
 import { OrphanAction } from "./RoleActions/OrphanAction";
+import { SeerAction } from "./RoleActions/SeerAction";
 
 interface EditPanelProps {
   open: boolean;
@@ -32,110 +34,8 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
 
   // Calculate dead player IDs (only from previous days)
   const deadPlayerIds = useMemo(() => {
-    const dead = new Set<string>();
-    const deadThisRound = new Set<string>();
-
-    for (const timeline of timelines) {
-      // Only count deaths from previous days
-      if (timeline.day >= currentDay) continue;
-
-      deadThisRound.clear();
-      const actions = timeline.actions;
-
-      // Wolf bite victim
-      const wolfBite = actions.find((a) => a.role === "soi" && a.action === "can");
-      const guardProtect = actions.find((a) => a.role === "bao_ve" && a.action === "bao_ve");
-      const witchSave = actions.find((a) => a.role === "phu_thuy" && a.action === "cuu");
-
-      if (wolfBite?.target) {
-        const isProtected = guardProtect?.target === wolfBite.target;
-        const isSaved = witchSave;
-        if (!isProtected && !isSaved) {
-          dead.add(wolfBite.target);
-          deadThisRound.add(wolfBite.target);
-        }
-      }
-
-      // Witch kill
-      const witchKill = actions.find((a) => a.role === "phu_thuy" && a.action === "giet");
-      if (witchKill?.target) {
-        dead.add(witchKill.target);
-        deadThisRound.add(witchKill.target);
-      }
-
-      // Vote results
-      const voteActions = actions.filter((a) => a.role === "dan_lang" && a.action === "vote" && a.target);
-      if (voteActions.length > 0) {
-        const voteCounts: Record<string, number> = {};
-        for (const vote of voteActions) {
-          if (vote.target) {
-            voteCounts[vote.target] = (voteCounts[vote.target] || 0) + 1;
-          }
-        }
-        let maxVotes = 0;
-        let maxVotedId = "";
-        for (const [playerId, count] of Object.entries(voteCounts)) {
-          if (count > maxVotes) {
-            maxVotes = count;
-            maxVotedId = playerId;
-          }
-        }
-        if (maxVotedId && maxVotes > 0) {
-          dead.add(maxVotedId);
-          deadThisRound.add(maxVotedId);
-        }
-      }
-
-      // Check Cupid pairs - if one dies, partner also dies
-      const cupidAction = actions.find((a) => a.role === "cupid" && a.action === "ghep_doi");
-      if (cupidAction?.target && cupidAction?.target2) {
-        const partner1Dead = deadThisRound.has(cupidAction.target);
-        const partner2Dead = deadThisRound.has(cupidAction.target2);
-        if (partner1Dead && !dead.has(cupidAction.target2)) {
-          dead.add(cupidAction.target2);
-          deadThisRound.add(cupidAction.target2);
-        }
-        if (partner2Dead && !dead.has(cupidAction.target)) {
-          dead.add(cupidAction.target);
-          deadThisRound.add(cupidAction.target);
-        }
-      }
-
-      // Check Hunter - if hunter dies, they can take someone with them
-      const hunters = players.filter((p) => p.role === "tho_san");
-      for (const hunter of hunters) {
-        if (deadThisRound.has(hunter.id)) {
-          // Find hunter's "săn cùng" target from any day
-          for (const t of timelines) {
-            const hunterAction = t.actions.find(
-              (a) => a.actor === hunter.id && a.action === "san_cung" && a.target
-            );
-            if (hunterAction?.target && !dead.has(hunterAction.target)) {
-              dead.add(hunterAction.target);
-              deadThisRound.add(hunterAction.target);
-            }
-          }
-        }
-      }
-    }
-    return dead;
-  }, [timelines, currentDay, players]);
-
-  const actors = roleName
-    ? players.filter((p) => {
-        // Include soi_nguyen in soi group
-        if (roleName === "soi" && p.role === "soi_nguyen") return true;
-        return p.role === roleName;
-      })
-    : [];
-
-  // Check if there are any alive wolves
-  const hasAliveWolves = useMemo(() => {
-    return players.some(
-      (p) =>
-        !deadPlayerIds.has(p.id) && (p.role === "soi" || p.role === "soi_nguyen")
-    );
-  }, [players, deadPlayerIds]);
+    return calculateDeadPlayerIds(players, timelines, currentDay);
+  }, [players, timelines, currentDay]);
 
   // Check if orphan's mother is dead
   const orphanMotherDead = useMemo(() => {
@@ -149,6 +49,45 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
     }
     return false;
   }, [timelines, deadPlayerIds]);
+
+  // Cursed players from previous days
+  const cursedPlayerIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const timeline of timelines) {
+      if (timeline.day >= currentDay) continue;
+      for (const action of timeline.actions) {
+        if (action.role === "soi_nguyen" && action.action === "nguyen" && action.target) {
+          set.add(action.target);
+        }
+      }
+    }
+    return set;
+  }, [timelines, currentDay]);
+
+  const actors = roleName
+    ? players.filter((p) => {
+        // Include soi_nguyen, orphan (if mother dead), and cursed players in soi group
+        if (roleName === "soi") {
+          if (p.role === "soi" || p.role === "soi_nguyen") return true;
+          if (p.role === "mo_coi" && orphanMotherDead) return true;
+          if (cursedPlayerIds.has(p.id)) return true;
+          return false;
+        }
+        return p.role === roleName;
+      })
+    : [];
+
+  // Check if there are any alive wolves
+  const hasAliveWolves = useMemo(() => {
+    return players.some(
+      (p) =>
+        !deadPlayerIds.has(p.id) &&
+        (p.role === "soi" ||
+          p.role === "soi_nguyen" ||
+          (p.role === "mo_coi" && orphanMotherDead) ||
+          cursedPlayerIds.has(p.id))
+    );
+  }, [players, deadPlayerIds, orphanMotherDead, cursedPlayerIds]);
 
   const renderAction = (actorId: string, isDead: boolean) => {
     // If player is dead and not villager, show dead message
@@ -172,6 +111,8 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
         return <WolfAction actorId={actorId} />;
       case "soi_nguyen":
         return <AlphaWolfAction actorId={actorId} />;
+      case "tien_tri":
+        return <SeerAction actorId={actorId} />;
       case "cupid":
         return <CupidAction actorId={actorId} />;
       case "tho_san":
@@ -191,8 +132,8 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onClose={() => onOpenChange(false)}>
-        <DialogHeader>
+      <DialogContent onClose={() => onOpenChange(false)} className="max-h-[85vh]">
+        <DialogHeader className="mb-4">
           <DialogTitle>
             {roleConfig ? `Chỉnh sửa ${roleConfig.label}` : "Chỉnh sửa Role"}
           </DialogTitle>

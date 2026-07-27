@@ -10,13 +10,23 @@ interface WitchActionProps {
 }
 
 export function WitchAction({ actorId }: WitchActionProps) {
-  const { players, currentDay, timelines, roleStates, addAction } =
+  const { players, currentDay, timelines, addAction, removeAction } =
     useGameStore();
   const [targetId, setTargetId] = useState("");
 
   const otherPlayers = players.filter((p) => p.id !== actorId);
-  const usedCuu = roleStates["phu_thuy"]?.["cuu"] ?? false;
-  const usedGiet = roleStates["phu_thuy"]?.["giet"] ?? false;
+
+  const usedCuuInPreviousDay = timelines.some(
+    (t) =>
+      t.day < currentDay &&
+      t.actions.some((a) => a.role === "phu_thuy" && a.action === "cuu")
+  );
+
+  const usedGietInPreviousDay = timelines.some(
+    (t) =>
+      t.day < currentDay &&
+      t.actions.some((a) => a.role === "phu_thuy" && a.action === "giet")
+  );
 
   const currentDayActions =
     timelines.find((t) => t.day === currentDay)?.actions ?? [];
@@ -44,7 +54,7 @@ export function WitchAction({ actorId }: WitchActionProps) {
     : null;
 
   const handleCuu = () => {
-    if (usedCuu || guardProtectedWolfVictim) return;
+    if (usedCuuInPreviousDay || guardProtectedWolfVictim) return;
     addAction({
       role: "phu_thuy",
       actor: actorId,
@@ -53,8 +63,12 @@ export function WitchAction({ actorId }: WitchActionProps) {
     });
   };
 
+  const handleRemoveCuu = () => {
+    removeAction("phu_thuy", actorId, "cuu", currentDay);
+  };
+
   const handleGiet = () => {
-    if (!targetId || usedGiet) return;
+    if (!targetId || usedGietInPreviousDay) return;
     addAction({
       role: "phu_thuy",
       actor: actorId,
@@ -65,15 +79,33 @@ export function WitchAction({ actorId }: WitchActionProps) {
     setTargetId("");
   };
 
+  const handleRemoveGiet = () => {
+    removeAction("phu_thuy", actorId, "giet", currentDay);
+    setTargetId("");
+  };
+
+  const currentGietTargetPlayer = existingGiet
+    ? players.find((p) => p.id === existingGiet.target)
+    : null;
+
   return (
     <div className="space-y-4">
       {/* Cứu action */}
       <div className="space-y-2">
         <p className="text-sm font-medium">
-          Cứu {wolfBiteVictimName && <span className="text-muted-foreground">→ {wolfBiteVictimName}</span>}
+          Bình cứu {wolfBiteVictimName && <span className="text-muted-foreground">→ {wolfBiteVictimName}</span>}
         </p>
-        {usedCuu || existingCuu ? (
-          <p className="text-sm text-muted-foreground">Đã dùng</p>
+        {usedCuuInPreviousDay ? (
+          <p className="text-xs text-muted-foreground italic">Đã sử dụng ở ngày trước</p>
+        ) : existingCuu ? (
+          <div className="flex items-center justify-between rounded bg-muted/40 p-2 text-sm">
+            <span>
+              Đã cứu: <span className="font-semibold text-green-400">{wolfBiteVictimName ?? "Nạn nhân"}</span>
+            </span>
+            <Button variant="ghost" size="sm" onClick={handleRemoveCuu} className="h-7 text-xs text-destructive">
+              Hủy cứu
+            </Button>
+          </div>
         ) : guardProtectedWolfVictim ? (
           <p className="text-sm text-green-400">Bảo vệ đã cứu</p>
         ) : wolfBiteVictimName ? (
@@ -87,21 +119,31 @@ export function WitchAction({ actorId }: WitchActionProps) {
 
       {/* Giết action */}
       <div className="space-y-2">
-        <p className="text-sm font-medium">Giết</p>
-        {usedGiet || existingGiet ? (
-          <p className="text-sm text-muted-foreground">Đã dùng</p>
+        <p className="text-sm font-medium">Bình độc (Giết)</p>
+        {usedGietInPreviousDay ? (
+          <p className="text-xs text-muted-foreground italic">Đã sử dụng ở ngày trước</p>
         ) : (
-          <>
+          <div className="space-y-2">
+            {existingGiet && (
+              <div className="flex items-center justify-between rounded bg-muted/40 p-2 text-sm">
+                <span>
+                  Đã dùng bình độc: <span className="font-semibold text-red-400">{currentGietTargetPlayer?.name ?? "Không rõ"}</span>
+                </span>
+                <Button variant="ghost" size="sm" onClick={handleRemoveGiet} className="h-7 text-xs text-destructive">
+                  Hủy chọn
+                </Button>
+              </div>
+            )}
             <Select
               value={targetId}
               onValueChange={setTargetId}
               options={otherPlayers.map((p) => ({ value: p.id, label: p.name }))}
-              placeholder="Chọn mục tiêu..."
+              placeholder={existingGiet ? "Chọn lại người muốn dùng bình độc..." : "Chọn mục tiêu..."}
             />
             <Button size="sm" onClick={handleGiet} disabled={!targetId}>
-              Lưu
+              {existingGiet ? "Cập nhật" : "Lưu"}
             </Button>
-          </>
+          </div>
         )}
       </div>
     </div>

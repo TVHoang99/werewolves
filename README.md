@@ -34,6 +34,7 @@ Mở http://localhost:3000
 |------|-----------|----------|
 | Sói | Cắn | Không giới hạn |
 | Sói nguyên | Nguyền | 1 lần |
+| Tiên tri | Soi | Mỗi ngày 1 người (không soi lại) |
 | Cupid | Ghép đôi | 1 lần |
 | Thợ săn | Săn cùng | Không giới hạn |
 | Bảo vệ | Bảo vệ | Không giới hạn |
