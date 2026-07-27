@@ -42,7 +42,7 @@ export function SetupGame() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-lg">
         {/* Card */}
-        <div className="rounded-xl border bg-card text-card-foreground shadow-lg p-6 sm:p-8 animate-in fade-in duration-300">
+        <div className="rounded-xl border bg-card text-card-foreground shadow-lg p-4 sm:p-6 animate-in fade-in duration-300">
           {/* Header */}
           <div className="flex items-center justify-between mb-6 sm:mb-8">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">

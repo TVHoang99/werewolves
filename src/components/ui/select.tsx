@@ -198,11 +198,11 @@ export function Select({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-9 sm:h-10 w-full items-center justify-between rounded-md border border-input bg-background px-2.5 sm:px-3 py-2 text-xs sm:text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
           isOpen && "ring-2 ring-ring ring-offset-2"
         )}
       >
-        <span className="flex items-center gap-2 truncate">
+        <span className="flex items-center gap-1.5 sm:gap-2 truncate">
           {selectedOption?.icon && (
             <span className="flex-shrink-0">{selectedOption.icon}</span>
           )}
