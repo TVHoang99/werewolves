@@ -15,16 +15,6 @@ import type { RoleConfig, RoleName } from "./types";
 
 export const ROLES: RoleConfig[] = [
   {
-    name: "soi",
-    label: "Sói",
-    icon: Skull,
-    isWolf: true,
-    maxPlayers: 0,
-    actions: [
-      { action: "can", label: "Cắn", limit: 0, targetCount: 1 },
-    ],
-  },
-  {
     name: "soi_nguyen",
     label: "Sói nguyền",
     icon: Crown,
@@ -32,6 +22,16 @@ export const ROLES: RoleConfig[] = [
     maxPlayers: 1,
     actions: [
       { action: "nguyen", label: "Nguyền", limit: 1, targetCount: 1 },
+    ],
+  },
+  {
+    name: "soi",
+    label: "Sói",
+    icon: Skull,
+    isWolf: true,
+    maxPlayers: 0,
+    actions: [
+      { action: "can", label: "Cắn", limit: 0, targetCount: 1 },
     ],
   },
   {

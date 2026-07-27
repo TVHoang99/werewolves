@@ -148,6 +148,10 @@ export function GameController() {
   }, [players, deadPlayerIds, orphanMotherDead, cursedPlayerIds, timelines]);
 
   const handleEditRole = (roleName: RoleName) => {
+    if (roleName === "dan_lang") {
+      setVoteOpen(true);
+      return;
+    }
     setEditRole(roleName);
     setEditPanelOpen(true);
   };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ROLE_MAP } from "@/lib/roles";
+import { ROLES, ROLE_MAP } from "@/lib/roles";
 import type { Player, RoleName, Timeline } from "@/lib/types";
 
 interface RoleListProps {
@@ -82,7 +82,12 @@ export function RoleList({ players, deadPlayerIds, timelines, currentDay, onEdit
     return groups;
   }, [players, orphanMotherDead, cursedPlayerIds]);
 
-  const roleNames = Object.keys(grouped);
+  const roleNames = useMemo(() => {
+    const definedOrder = ROLES.map((r) => r.name);
+    return Object.keys(grouped).sort(
+      (a, b) => definedOrder.indexOf(a as RoleName) - definedOrder.indexOf(b as RoleName)
+    );
+  }, [grouped]);
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-lg p-4 sm:p-6">
