@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useGameStore } from "@/lib/store";
 import { ROLE_MAP } from "@/lib/roles";
+import { calculateDeadPlayerIds } from "@/lib/gameUtils";
 import type { RoleName } from "@/lib/types";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,12 @@ export function AlphaWolfAction({ actorId }: AlphaWolfActionProps) {
   const { players, currentDay, timelines, addAction, removeAction } =
     useGameStore();
   const [targetId, setTargetId] = useState("");
+
+  const deadPlayerIds = useMemo(() => {
+    return calculateDeadPlayerIds(players, timelines, currentDay);
+  }, [players, timelines, currentDay]);
+
+  const isActorDead = deadPlayerIds.has(actorId);
 
   const cursedPlayerIds = useMemo(() => {
     const set = new Set<string>();
@@ -33,6 +40,7 @@ export function AlphaWolfAction({ actorId }: AlphaWolfActionProps) {
     const roleConfig = ROLE_MAP[p.role as RoleName];
     if (roleConfig?.isWolf) return false;
     if (cursedPlayerIds.has(p.id)) return false;
+    if (deadPlayerIds.has(p.id)) return false;
     return true;
   });
 
@@ -49,7 +57,7 @@ export function AlphaWolfAction({ actorId }: AlphaWolfActionProps) {
   );
 
   const handleSave = () => {
-    if (!targetId || usedInPreviousDay) return;
+    if (!targetId || usedInPreviousDay || isActorDead) return;
     addAction({
       role: "soi_nguyen",
       actor: actorId,
@@ -84,6 +92,12 @@ export function AlphaWolfAction({ actorId }: AlphaWolfActionProps) {
           </p>
         )}
       </div>
+    );
+  }
+
+  if (isActorDead) {
+    return (
+      <p className="text-sm text-red-400 italic">Đã chết - Không thể sử dụng kỹ năng nguyền</p>
     );
   }
 

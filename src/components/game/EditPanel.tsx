@@ -92,8 +92,8 @@ export function EditPanel({ open, onOpenChange, roleName }: EditPanelProps) {
   const renderAction = (actorId: string, isDead: boolean) => {
     // If player is dead and not villager, show dead message
     // Exception: wolves can still bite if other wolves are alive
-    if (isDead && roleName !== "dan_lang") {
-      if ((roleName === "soi" || roleName === "soi_nguyen") && hasAliveWolves) {
+    if (isDead && roleName !== "dan_lang" && roleName !== "soi_nguyen") {
+      if (roleName === "soi" && hasAliveWolves) {
         return <WolfAction actorId={actorId} />;
       }
       return (

@@ -15,8 +15,6 @@ export function CupidAction({ actorId }: CupidActionProps) {
   const [targetA, setTargetA] = useState("");
   const [targetB, setTargetB] = useState("");
 
-  const otherPlayers = players.filter((p) => p.id !== actorId);
-
   const usedInPreviousDay = timelines.some(
     (t) =>
       t.day < currentDay &&
@@ -96,13 +94,13 @@ export function CupidAction({ actorId }: CupidActionProps) {
         <Select
           value={targetA}
           onValueChange={setTargetA}
-          options={otherPlayers.map((p) => ({ value: p.id, label: p.name }))}
+          options={players.map((p) => ({ value: p.id, label: p.name }))}
           placeholder="Chọn người chơi A..."
         />
         <Select
           value={targetB}
           onValueChange={setTargetB}
-          options={otherPlayers.filter((p) => p.id !== targetA).map((p) => ({ value: p.id, label: p.name }))}
+          options={players.filter((p) => p.id !== targetA).map((p) => ({ value: p.id, label: p.name }))}
           placeholder="Chọn người chơi B..."
         />
         <Button size="sm" onClick={handleSave} disabled={!targetA || !targetB}>

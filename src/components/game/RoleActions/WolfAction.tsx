@@ -19,10 +19,10 @@ export function WolfAction({ actorId }: WolfActionProps) {
     return calculateDeadPlayerIds(players, timelines, currentDay);
   }, [players, timelines, currentDay]);
 
-  // Exclude self and dead players from targets
+  // Exclude dead players from targets (wolves can bite anyone alive, including self/wolves)
   const availableTargets = useMemo(() => {
-    return players.filter((p) => p.id !== actorId && !deadPlayerIds.has(p.id));
-  }, [players, actorId, deadPlayerIds]);
+    return players.filter((p) => !deadPlayerIds.has(p.id));
+  }, [players, deadPlayerIds]);
 
   const currentDayActions =
     timelines.find((t) => t.day === currentDay)?.actions ?? [];
